@@ -230,16 +230,22 @@ void grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr){
  * =============================================================================
  */
 void grid_print (grid_t* gridPtr){
-    for (long z = 0; z < gridPtr->depth; z++) {
-        printf("[z = %ld]\n", z);
-        for (long y = 0; y < gridPtr->height; y++) {
-            for (long x = 0; x < gridPtr->width; x++) {
-                long *pointRef = grid_getPointRef(gridPtr, x, y, z);
-                printf(" %ld", *pointRef);
+    long width  = gridPtr->width;
+    long height = gridPtr->height;
+    long depth  = gridPtr->depth;
+    long z;
+
+    for (z = 0; z < depth; z++) {
+        printf("[z = %li]\n", z);
+        long x;
+        for (x = 0; x < width; x++) {
+            long y;
+            for (y = 0; y < height; y++) {
+                printf("%4li", *grid_getPointRef(gridPtr, x, y, z));
             }
-            printf("\n");
+            puts("");
         }
-        printf("\n");
+        puts("");
     }
 }
 

@@ -1,2 +1,0 @@
-exit(EXIT_FAILURE) ou exit(1);
-makefile nao entendo;

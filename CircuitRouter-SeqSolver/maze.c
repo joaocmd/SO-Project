@@ -131,11 +131,13 @@ static void addToGrid (grid_t* gridPtr, vector_t* vectorPtr, char* type){
     long n = vector_getSize(vectorPtr);
     for (i = 0; i < n; i++) {
         coordinate_t* coordinatePtr = (coordinate_t*)vector_at(vectorPtr, i);
-        long x = coordinatePtr->x;
-        long y = coordinatePtr->y;
-        long z = coordinatePtr->z;
-        if (!grid_isPointValid(gridPtr, x, y, z)) {
-            fprintf(stderr, "Invalid grid input.\n");
+        if (!grid_isPointValid(gridPtr,
+                               coordinatePtr->x,
+                               coordinatePtr->y,
+                               coordinatePtr->z))
+        {
+            fprintf(stderr, "Error: %s (%li, %li, %li) invalid\n",
+                    type, coordinatePtr->x, coordinatePtr->y, coordinatePtr->z);
             exit(1);
         }
     }
@@ -366,6 +368,7 @@ bool_t maze_checkPaths (maze_t* mazePtr, list_t* pathVectorListPtr, bool_t doPri
 
     return TRUE;
 }
+
 
 /* =============================================================================
  *
