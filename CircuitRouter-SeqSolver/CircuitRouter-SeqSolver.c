@@ -75,7 +75,7 @@ enum param_defaults {
     PARAM_DEFAULT_ZCOST    = 2,
 };
 
-bool_t global_doPrint = FALSE;
+bool_t global_doPrint = TRUE;
 char* global_inputFile = NULL;
 long global_params[256]; /* 256 = ascii limit */
 
@@ -128,9 +128,6 @@ static void parseArgs (long argc, char* const argv[]){
             case 'y':
             case 'z':
                 global_params[(unsigned char)opt] = atol(optarg);
-                break;
-            case 'p':
-                global_doPrint = TRUE;
                 break;
             case '?':
             case 'h':
