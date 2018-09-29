@@ -81,10 +81,10 @@ long global_params[256]; /* 256 = ascii limit */
 
 
 /* =============================================================================
- * displayUsage
+ * displayUsageAndExit
  * =============================================================================
  */
-static void displayUsage (const char* appName){
+static void displayUsageAndExit (const char* appName){
     printf("Usage: %s [options]\n", appName);
     puts("\nOptions:                            (defaults)\n");
     printf("    b <INT>    [b]end cost          (%i)\n", PARAM_DEFAULT_BENDCOST);
@@ -110,10 +110,10 @@ static void setDefaultParams (){
 
 /* =============================================================================
  * parseArgs
- * -- Return pointer to designated input file.
+ * -- returns possible valid input file name.
  * =============================================================================
  */
-static FILE *parseArgs (long argc, char* const argv[]){
+static char* const parseArgs (long argc, char* const argv[]){
     long opt;
 
     opterr = 0;
@@ -140,19 +140,13 @@ static FILE *parseArgs (long argc, char* const argv[]){
         fprintf(stderr, "%s must receive (only) one non-option argument. (Input file)\n", 
                          argv[0]);
         opterr++;
-    } else if (opterr == 0) {
-        FILE *fp = fopen(argv[optind], "r");
-        if (fp == NULL) {
-            fprintf(stderr, "Invalid input file: %s\n", argv[optind]);
-            opterr++;
-        } else {
-            return fp;
-        }
     }
 
-    if (opterr) {
-        displayUsage(argv[0]);
+    if (opterr == 0) {
+        return argv[optind];
     }
+
+    displayUsageAndExit(argv[0]);
     /* 
     * The function will never reach this point, this return is here to avoid
     * warning: control reaches end of non-void function.
@@ -168,12 +162,11 @@ int main(int argc, char** argv){
     /*
      * Initialization
      */
-    FILE *inputFile = parseArgs(argc, (char** const)argv);
+    char* const fileName = parseArgs(argc, (char** const)argv);
     maze_t* mazePtr = maze_alloc();
     assert(mazePtr);
 
-    long numPathToRoute = maze_read(mazePtr, inputFile);
-    fclose(inputFile);
+    long numPathToRoute = maze_read(mazePtr, (char* const) fileName);
     router_t* routerPtr = router_alloc(global_params[PARAM_XCOST],
                                        global_params[PARAM_YCOST],
                                        global_params[PARAM_ZCOST],
