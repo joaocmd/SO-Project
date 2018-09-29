@@ -137,7 +137,7 @@ static FILE *parseArgs (long argc, char* const argv[]){
     }
 
     if (argc - optind != 1) {
-        fprintf(stderr, "%s must receive only one non-option argument. (Input file)\n", 
+        fprintf(stderr, "%s must receive (only) one non-option argument. (Input file)\n", 
                          argv[0]);
         opterr++;
     } else if (opterr == 0) {
