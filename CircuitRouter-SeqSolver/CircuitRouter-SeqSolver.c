@@ -113,14 +113,13 @@ static void setDefaultParams (){
  * =============================================================================
  */
 static void parseArgs (long argc, char* const argv[]){
-    long i;
     long opt;
 
     opterr = 0;
 
     setDefaultParams();
 
-    while ((opt = getopt(argc, argv, "hb:px:y:z:")) != -1) {
+    while ((opt = getopt(argc, argv, "hb:x:y:z:")) != -1) {
         switch (opt) {
             case 'b':
             case 'x':
@@ -136,16 +135,24 @@ static void parseArgs (long argc, char* const argv[]){
         }
     }
 
-    for (i = optind; i < argc; i++) {
-        fprintf(stderr, "Non-option argument: %s\n", argv[i]);
+    if (argc - optind != 1) {
+        fprintf(stderr, "%s must receive only one non-option argument. (Input file)", 
+                         argv[0]);
         opterr++;
+    } else {
+        FILE *fp = fopen(argv[optind], "r");
+        if (fp == NULL) {
+            fprintf(stderr, "Invalid input file: %s\n", argv[optind]);
+            opterr++;
+        } else {
+            fclose(fp);
+        }
     }
 
     if (opterr) {
         displayUsage(argv[0]);
     }
 }
-
 
 /* =============================================================================
  * main
