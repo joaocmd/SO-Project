@@ -1,0 +1,3 @@
+char * const, char const * const, char const *
+Devo tornar o nome do ficheiro uma variavel publica, ou passar como argumento em todas as funções?
+Posso apagar completamente o código relativo ao global_doPrint, ou devo manter?
