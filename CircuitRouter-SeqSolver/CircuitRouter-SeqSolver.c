@@ -110,9 +110,10 @@ static void setDefaultParams (){
 
 /* =============================================================================
  * parseArgs
+ * -- Return pointer to designated input file.
  * =============================================================================
  */
-static void parseArgs (long argc, char* const argv[]){
+static FILE *parseArgs (long argc, char* const argv[]){
     long opt;
 
     opterr = 0;
@@ -136,22 +137,27 @@ static void parseArgs (long argc, char* const argv[]){
     }
 
     if (argc - optind != 1) {
-        fprintf(stderr, "%s must receive only one non-option argument. (Input file)", 
+        fprintf(stderr, "%s must receive only one non-option argument. (Input file)\n", 
                          argv[0]);
         opterr++;
-    } else {
+    } else if (opterr == 0) {
         FILE *fp = fopen(argv[optind], "r");
         if (fp == NULL) {
             fprintf(stderr, "Invalid input file: %s\n", argv[optind]);
             opterr++;
         } else {
-            fclose(fp);
+            return fp;
         }
     }
 
     if (opterr) {
         displayUsage(argv[0]);
     }
+    /* 
+    * The function will never reach this point, this return is here to avoid
+    * warning: control reaches end of non-void function.
+    */
+    return NULL;
 }
 
 /* =============================================================================
@@ -162,11 +168,12 @@ int main(int argc, char** argv){
     /*
      * Initialization
      */
-    parseArgs(argc, (char** const)argv);
+    FILE *inputFile = parseArgs(argc, (char** const)argv);
     maze_t* mazePtr = maze_alloc();
     assert(mazePtr);
 
-    long numPathToRoute = maze_read(mazePtr);
+    long numPathToRoute = maze_read(mazePtr, inputFile);
+    fclose(inputFile);
     router_t* routerPtr = router_alloc(global_params[PARAM_XCOST],
                                        global_params[PARAM_YCOST],
                                        global_params[PARAM_ZCOST],

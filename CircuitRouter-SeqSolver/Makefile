@@ -16,6 +16,8 @@ $(TARGET): $(OBJS)
 
 run:
 	./CircuitRouter-SeqSolver inputs/random-x32-y32-z3-n64.txt
+runTwoFiles:
+	./CircuitRouter-SeqSolver inputs/random-x22-y32-z3-n64.txt inputs/randomxxx
 runFlags:
 	./CircuitRouter-SeqSolver -h -h -h inputs/random-x32-y32-z3-n64.txt -h -h -h
 runWrongFile:
