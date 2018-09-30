@@ -112,7 +112,7 @@ static void setDefaultParams (){
  * parseArgs
  * -- returns possible valid input file name.
  * =============================================================================
- */
+ */ //TODO faz sentido o file name ser global?
 static char* const parseArgs (long argc, char* const argv[]){
     long opt;
 

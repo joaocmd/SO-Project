@@ -1,0 +1,19 @@
+while (1) {
+    ler comandos
+    se o comando for run:
+        se nchildren < maxchildren:
+            fork()
+            se pid() = 0:
+                status = execv
+                exit(status)
+            else:
+                continua a procurar comandos
+        else:
+            wait
+    se o comando for exit:
+        wait (todos os forks)
+        dar o seu valor de exit
+        exit
+    else:
+        mensagem de comando invalido
+}

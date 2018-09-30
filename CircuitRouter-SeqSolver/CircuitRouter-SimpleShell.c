@@ -12,14 +12,14 @@
 
 unsigned long MAXCHILDREN = ULONG_MAX;
 
-void simpleshell_displayUsage(const char* appName) { //TODO try simpler function names
+void displayUsage(const char* appName) { //TODO maybe change conflicting names
     printf("Usage: %s\n", appName);
     puts("Additional Argument:                              (default)");
     puts("    MAXCHILDREN <ULONG>   child processes limit   ULONG_MAX");
     exit(1);
 }
 
-void simpleshell_parseArgs(int argc, char** argv) { //TODO same as displayUsage
+void parseArgs(int argc, char** argv) { //TODO same as displayUsage
     if (argc > 2) {
         simpleshell_displayUsage(argv[0]);
     }
@@ -32,24 +32,29 @@ void simpleshell_parseArgs(int argc, char** argv) { //TODO same as displayUsage
     }
 }
 
+#define ARGVECTORSIZE 10
+#define BUFFERSIZE 128
+
+int command(char** argVector, const char * command) { //TODO meter argVector global?
+    return strcmp(argVector, command) == 0;
+}
+
 int main(int argc, char** argv) {
+    parseArgs(argc, argv);
+    char *argVector[ARGVECTORSIZE];
+    char buffer[BUFFERSIZE];
 
-    simpleshell_parseArgs(argc, argv);
+    int nChilds = 0;
+    int childPids[MAXCHILDREN]; //TODO faz sentido usar maxchildren mas ao mesmo tempo pode ocupar demasiado espaço, caso não seja especificado
 
-    int pid;
-    pid = fork();
-
-    if (pid == -1) {
-        fprintf(stderr, "Error creating child process\n");
-        exit(1);
+    while (1) {
+        printf("> ");
+        readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
+        for (int i = 0; i < ARGVECTORSIZE; i++) puts(argVector[i]);
+        if (command("run")) {
+            
+        }
     }
-    
-    if (pid == 0) {
-        printf("I'm child process with pid = %i\n", getpid());
-    } else {
-        printf("I'm parent process with pid = %i, my child is %i\n", getpid(), pid);
-    }
-
 
     return 0;
 }
