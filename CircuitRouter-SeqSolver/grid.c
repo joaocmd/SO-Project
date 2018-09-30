@@ -55,6 +55,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 #include "coordinate.h"
 #include "grid.h"
 #include "lib/types.h"
@@ -226,27 +227,46 @@ void grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr){
 
 
 /* =============================================================================
- * grid_print
+ * grid_printToFile
  * =============================================================================
  */
-void grid_print (grid_t* gridPtr){
+void grid_printToFile (grid_t* gridPtr, char* const inputFile){
+
+
     long width  = gridPtr->width;
     long height = gridPtr->height;
     long depth  = gridPtr->depth;
     long z;
 
+    //TODO dinamically allocate memory for strings? clean up code
+    char outputFile[128]; 
+    sprintf(outputFile, "%s.res", inputFile);
+    if (access(outputFile, F_OK != -1)) {
+        char oldOutputFile[128];
+        sprintf(oldOutputFile, "%s.old", outputFile);
+        remove(oldOutputFile);
+        rename(outputFile, oldOutputFile);
+    }
+
+    FILE *fp = fopen(outputFile, "w");
+    if (fp == NULL) {
+        fprintf(stderr, "Error creating new output file");
+        exit(1);
+    }
+
     for (z = 0; z < depth; z++) {
-        printf("[z = %li]\n", z);
+        fprintf(fp, "[z = %li]\n", z);
         long x;
         for (x = 0; x < width; x++) {
             long y;
             for (y = 0; y < height; y++) {
-                printf("%4li", *grid_getPointRef(gridPtr, x, y, z));
+                fprintf(fp, "%4li", *grid_getPointRef(gridPtr, x, y, z));
             }
-            puts("");
+            fprintf(fp, "\n");
         }
-        puts("");
+        fprintf(fp, "\n");
     }
+    fclose(fp);
 }
 
 

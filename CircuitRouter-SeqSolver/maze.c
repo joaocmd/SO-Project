@@ -276,7 +276,8 @@ long maze_read (maze_t* mazePtr, char* const fileName){
  * maze_checkPaths
  * =============================================================================
  */
-bool_t maze_checkPaths (maze_t* mazePtr, list_t* pathVectorListPtr, bool_t doPrintPaths){
+bool_t maze_checkPaths (maze_t* mazePtr, list_t* pathVectorListPtr,
+                        bool_t doPrintPaths, char* const fileName){
     grid_t* gridPtr = mazePtr->gridPtr;
     long width  = gridPtr->width;
     long height = gridPtr->height;
@@ -366,8 +367,8 @@ bool_t maze_checkPaths (maze_t* mazePtr, list_t* pathVectorListPtr, bool_t doPri
     } /* iterate over pathVectorList */
 
     if (doPrintPaths) {
-        puts("\nRouted Maze:");
-        grid_print(testGridPtr);
+        //puts("\nRouted Maze:"); TODO delete??
+        grid_printToFile(testGridPtr, fileName);
     }
 
     grid_free(testGridPtr);

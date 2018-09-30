@@ -84,6 +84,7 @@ long global_params[256]; /* 256 = ascii limit */
  * displayUsageAndExit
  * =============================================================================
  */
+//TODO show usage of inputfile
 static void displayUsageAndExit (const char* appName){
     printf("Usage: %s [options]\n", appName);
     puts("\nOptions:                            (defaults)\n");
@@ -199,7 +200,7 @@ int main(int argc, char** argv){
      * Check solution and clean up
      */
     assert(numPathRouted <= numPathToRoute);
-    bool_t status = maze_checkPaths(mazePtr, pathVectorListPtr, global_doPrint);
+    bool_t status = maze_checkPaths(mazePtr, pathVectorListPtr, global_doPrint, fileName);
     assert(status == TRUE);
     puts("Verification passed.");
 
