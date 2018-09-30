@@ -81,12 +81,11 @@ long global_params[256]; /* 256 = ascii limit */
 
 
 /* =============================================================================
- * displayUsageAndExit
+ * displayUsage
  * =============================================================================
  */
-//TODO show usage of inputfile
-static void displayUsageAndExit (const char* appName){
-    printf("Usage: %s [options]\n", appName);
+static void displayUsage (const char* appName){
+    printf("Usage: %s <inputfile> [options]\n", appName);
     puts("\nOptions:                            (defaults)\n");
     printf("    b <INT>    [b]end cost          (%i)\n", PARAM_DEFAULT_BENDCOST);
     printf("    x <UINT>   [x] movement cost    (%i)\n", PARAM_DEFAULT_XCOST);
@@ -147,7 +146,7 @@ static char* const parseArgs (long argc, char* const argv[]){
         return argv[optind];
     }
 
-    displayUsageAndExit(argv[0]);
+    displayUsage(argv[0]);
     /* 
     * The function will never reach this point, this return is here to avoid
     * warning: control reaches end of non-void function.

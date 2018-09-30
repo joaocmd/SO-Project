@@ -6,3 +6,5 @@ podemos mudar os nomes e prototipos de funções à vontade?
 verificar que o ficheiro existe antes de chamar remove é redundante?
 tamanho máximo para input files?
 como é que vão buscar a lib/*?
+Makefile, como alterar?
+MAXCHILDREN ulong?
