@@ -230,29 +230,12 @@ void grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr){
  * grid_printToFile
  * =============================================================================
  */
-void grid_printToFile (grid_t* gridPtr, char* const inputFile){
-
+void grid_printToFile (grid_t* gridPtr, FILE* fp){
 
     long width  = gridPtr->width;
     long height = gridPtr->height;
     long depth  = gridPtr->depth;
     long z;
-
-    //TODO dinamically allocate memory for strings? clean up code
-    char outputFile[128]; 
-    sprintf(outputFile, "%s.res", inputFile);
-    if (access(outputFile, F_OK != -1)) {
-        char oldOutputFile[128];
-        sprintf(oldOutputFile, "%s.old", outputFile);
-        remove(oldOutputFile);
-        rename(outputFile, oldOutputFile);
-    }
-
-    FILE *fp = fopen(outputFile, "w");
-    if (fp == NULL) {
-        fprintf(stderr, "Error creating new output file");
-        exit(1);
-    }
 
     for (z = 0; z < depth; z++) {
         fprintf(fp, "[z = %li]\n", z);
@@ -266,7 +249,6 @@ void grid_printToFile (grid_t* gridPtr, char* const inputFile){
         }
         fprintf(fp, "\n");
     }
-    fclose(fp);
 }
 
 

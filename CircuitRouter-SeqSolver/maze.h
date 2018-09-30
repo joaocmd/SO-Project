@@ -92,7 +92,7 @@ void maze_free (maze_t* mazePtr);
  * -- Return number of path to route
  * =============================================================================
  */
-long maze_read (maze_t* mazePtr, char* const fileName);
+long maze_read (maze_t* mazePtr, FILE* inputFP, FILE* outputFP);
 
 
 /* =============================================================================
@@ -100,7 +100,7 @@ long maze_read (maze_t* mazePtr, char* const fileName);
  * =============================================================================
  */
 bool_t maze_checkPaths (maze_t* mazePtr, list_t* pathListPtr,
-                        bool_t doPrintPaths, char* const fileName);
+                        bool_t doPrintPaths, FILE* fp);
 
 
 #endif /* MAZE_H */

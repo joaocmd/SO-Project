@@ -1,6 +1,8 @@
 while (1) {
     ler comandos
     se o comando for run:
+        while nchildren >= maxchildren:
+            wait() //Wait simplesmente até sair do loop? ou espero por um processo especifico?
         se nchildren < maxchildren:
             fork()
             se pid() = 0:

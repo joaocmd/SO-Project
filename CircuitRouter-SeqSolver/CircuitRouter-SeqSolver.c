@@ -55,6 +55,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "lib/list.h"
 #include "maze.h"
 #include "router.h"
@@ -166,7 +167,33 @@ int main(int argc, char** argv){
     maze_t* mazePtr = maze_alloc();
     assert(mazePtr);
 
-    long numPathToRoute = maze_read(mazePtr, (char* const) fileName);
+    FILE *inputFP = fopen(fileName, "r");
+    if (inputFP == NULL) {
+        fprintf(stderr, "Invalid input file: %s\n", fileName);
+        exit(1);
+    }
+
+    //TODO dinamically allocate memory for strings? clean up code
+    char outputFile[128];
+    sprintf(outputFile, "%s.res", fileName);
+    /*
+     * Check if file exists
+     */
+    if (access(outputFile, F_OK) != -1) {
+        char oldOutputFile[128];
+        sprintf(oldOutputFile, "%s.old", outputFile);
+        remove(oldOutputFile);
+        rename(outputFile, oldOutputFile);
+    }
+
+    FILE *outputFP = fopen(outputFile, "w");
+    if (outputFP == NULL) {
+        fprintf(stderr, "Error creating output file.\n");
+        exit(1);
+    }
+
+    long numPathToRoute = maze_read(mazePtr, inputFP, outputFP);
+    fclose(inputFP);
     router_t* routerPtr = router_alloc(global_params[PARAM_XCOST],
                                        global_params[PARAM_YCOST],
                                        global_params[PARAM_ZCOST],
@@ -191,17 +218,19 @@ int main(int argc, char** argv){
         vector_t* pathVectorPtr = (vector_t*)list_iter_next(&it, pathVectorListPtr);
         numPathRouted += vector_getSize(pathVectorPtr);
 	}
-    printf("Paths routed    = %li\n", numPathRouted);
-    printf("Elapsed time    = %f seconds\n", TIMER_DIFF_SECONDS(startTime, stopTime));
+
+    fprintf(outputFP, "Paths routed    = %li\n", numPathRouted);
+    fprintf(outputFP, "Elapsed time    = %f seconds\n", TIMER_DIFF_SECONDS(startTime, stopTime));
 
 
     /*
      * Check solution and clean up
      */
     assert(numPathRouted <= numPathToRoute);
-    bool_t status = maze_checkPaths(mazePtr, pathVectorListPtr, global_doPrint, fileName);
+    bool_t status = maze_checkPaths(mazePtr, pathVectorListPtr, global_doPrint, outputFP);
     assert(status == TRUE);
-    puts("Verification passed.");
+    fprintf(outputFP, "Verification passed.");
+    fclose(outputFP);
 
     maze_free(mazePtr);
     router_free(routerPtr);

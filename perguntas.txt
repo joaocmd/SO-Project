@@ -7,6 +7,8 @@ verificar que o ficheiro existe antes de chamar remove é redundante?
 tamanho máximo para input files? alocado dinamicamente? TODO ver warning sobre isso
 como é que vão buscar a lib/*?
 Makefile, como alterar?
+Passar nome de ficheiro ou file pointer como argumento? Nos slides aparece o file pointer mas dá jeito manipular o nome primeiro.
 MAXCHILDREN ulong? Faz sentido ser global?
 commandlinereader BUFFERSIZE e ARGVECTOR
 **************************************VER TODOs********************************************
+se fazemos wait não perdemos a shell?
