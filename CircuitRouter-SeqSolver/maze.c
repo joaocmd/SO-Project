@@ -153,7 +153,7 @@ static void addToGrid (grid_t* gridPtr, vector_t* vectorPtr, char* type){
 long maze_read (maze_t* mazePtr, char* const fileName){
     
     /*
-     * Parse input from fptr
+     * Parse input from file <fileName>
      */
     long lineNumber = 0;
     long height = -1;
@@ -165,14 +165,13 @@ long maze_read (maze_t* mazePtr, char* const fileName){
     vector_t* srcVectorPtr = mazePtr->srcVectorPtr;
     vector_t* dstVectorPtr = mazePtr->dstVectorPtr;
     
-    FILE *fptr = fopen(fileName, "r");
-    if (fptr == NULL) {
+    FILE *fp = fopen(fileName, "r");
+    if (fp == NULL) {
         fprintf(stderr, "Invalid input file: %s\n", fileName);
         exit(1);
     }
     
-    while (fgets(line, sizeof(line), fptr)) {
-        
+    while (fgets(line, sizeof(line), fp)) {
         char code;
         long x1, y1, z1;
         long x2, y2, z2;
@@ -238,7 +237,7 @@ long maze_read (maze_t* mazePtr, char* const fileName){
         }
         
     } /* iterate over lines in input file */
-    
+    fclose(fp);
     
     /*
      * Initialize grid contents
