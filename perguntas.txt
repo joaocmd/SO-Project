@@ -12,3 +12,5 @@ MAXCHILDREN ulong? Faz sentido ser global?
 commandlinereader BUFFERSIZE e ARGVECTOR
 **************************************VER TODOs********************************************
 se fazemos wait não perdemos a shell?
+criar pasta outputs?
+organização dos ficheiros source

@@ -174,6 +174,7 @@ int main(int argc, char** argv){
     }
 
     //TODO dinamically allocate memory for strings? clean up code
+    //TODO create function to generate output file, send them to folder outputs/
     char outputFile[128];
     sprintf(outputFile, "%s.res", fileName);
     /*
