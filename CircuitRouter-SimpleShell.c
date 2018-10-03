@@ -58,26 +58,30 @@ int length(char **v, int vSize) {
     return i;
 }
 
+void waitAndSave(vector_t *childs, int *nChildren) {
+    pid = wait(&status);
+    Process proc = process_alloc(pid, status);
+    vector_pushBack(forks, proc);
+    (*nChildren)--;
+}
+
 int main(int argc, char** argv) {
     parseArgs(argc, argv);
     char *argVector[ARGVECTORSIZE];
     char buffer[BUFFERSIZE];
 
-    int nChilds = 0;
+    int nChildren = 0;
     vector_t *forks = vector_alloc(1);
     pid_t pid;
     int status;
 
     while (1) {
-        //printf("> ");
+        //printf("> "); //TODO se o programa troca-se todo
         readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
 
         if (command("run", argVector)) {
-            while (nChilds >= MAXCHILDREN) {
-                pid = wait(&status);
-                Process proc = process_alloc(pid, status);
-                vector_pushBack(forks, proc);
-                nChilds--;
+            while (nChildren >= MAXCHILDREN) {
+                waitAndSave(forks, %nChildren);
             }
             pid_t pid = fork(); 
             if (pid == -1) {
@@ -94,16 +98,14 @@ int main(int argc, char** argv) {
                 printf("%i\n", status);
                 exit(status);
             } else {
-                nChilds++;
+                nChildren++;
             }
         } else if (command("exit", argVector)) {
-            while (nChilds > 0) {
-                pid = wait(&status);
-                Process proc = process_alloc(pid, status);
-                vector_pushBack(forks, proc);
-                nChilds--;
+            while (nChildren > 0) {
+                waitAndSave(forks, %nChildren);
             }
-            break; 
+            
+            break;
         } else {
             fprintf(stderr, "Invalid command\n");
         }
