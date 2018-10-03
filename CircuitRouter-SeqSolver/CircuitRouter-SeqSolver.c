@@ -56,6 +56,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
 #include "lib/list.h"
 #include "maze.h"
 #include "router.h"
@@ -111,10 +112,9 @@ static void setDefaultParams (){
 
 /* =============================================================================
  * parseArgs
- * -- returns possible valid input file name.
  * =============================================================================
- */ //TODO faz sentido o file name ser global?
-static char* const parseArgs (long argc, char* const argv[]){
+ */
+static void parseArgs (long argc, char* const argv[]){
     long opt;
 
     opterr = 0;
@@ -144,15 +144,10 @@ static char* const parseArgs (long argc, char* const argv[]){
     }
 
     if (opterr == 0) {
-        return argv[optind];
+        global_inputFile = argv[optind];
+    } else {
+        displayUsage(argv[0]);
     }
-
-    displayUsage(argv[0]);
-    /* 
-    * The function will never reach this point, this return is here to avoid
-    * warning: control reaches end of non-void function.
-    */
-    return NULL;
 }
 
 /* =============================================================================
@@ -163,27 +158,24 @@ int main(int argc, char** argv){
     /*
      * Initialization
      */
-    char* const fileName = parseArgs(argc, (char** const)argv);
+    parseArgs(argc, (char** const)argv);
     maze_t* mazePtr = maze_alloc();
     assert(mazePtr);
 
-    FILE *inputFP = fopen(fileName, "r");
+    FILE *inputFP = fopen(global_inputFile, "r");
     if (inputFP == NULL) {
-        fprintf(stderr, "Invalid input file: %s\n", fileName);
+        fprintf(stderr, "Invalid input file: %s\n", global_inputFile);
         exit(1);
     }
 
-    //TODO dinamically allocate memory for strings? clean up code
-    //TODO create function to generate output file, send them to folder outputs/
-    char outputFile[128];
-    sprintf(outputFile, "%s.res", fileName);
+    char outputFile[strlen(global_inputFile) + strlen(".res") + 1];
+    sprintf(outputFile, "%s.res", global_inputFile);
     /*
      * Check if file exists
      */
     if (access(outputFile, F_OK) != -1) {
-        char oldOutputFile[128];
+        char oldOutputFile[strlen(outputFile) + strlen(".old") + 1];
         sprintf(oldOutputFile, "%s.old", outputFile);
-        remove(oldOutputFile);
         rename(outputFile, oldOutputFile);
     }
 

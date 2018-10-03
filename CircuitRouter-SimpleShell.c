@@ -11,37 +11,51 @@
 #include <sys/wait.h>
 #include <limits.h>
 #include <string.h>
-#include "../lib/commandlinereader.h"
-#include "../lib/vector.h"
-#include "../customlib/finprocess.h"
+#include "lib/commandlinereader.h"
+#include "lib/vector.h"
+#include "finprocess.h"
 
-unsigned long MAXCHILDREN = ULONG_MAX;
+unsigned int MAXCHILDREN = UINT_MAX;
 
 void displayUsage(const char* appName) {
     printf("Usage: %s\n", appName);
-    puts("Additional Argument:                              (default)");
-    puts("    MAXCHILDREN <ULONG>   child processes limit   ULONG_MAX");
-    exit(1);
+    printf("Additional Argument:                              (default)\n");
+    printf("    MAXCHILDREN <ULONG>   child processes limit   ULONG_MAX\n");
+    printf("\nShell:\n");
+    printf("    run <inputfile>       runs CircuitRouter-SeqSolver with <inputfile>\n");
+    printf("    exit                  exits the console\n");
 }
 
 void parseArgs(int argc, char** argv) {
     if (argc > 2) {
         displayUsage(argv[0]);
+        exit(1);
     }
     if (argc == 2) {
         MAXCHILDREN = strtoul(argv[1], NULL, 10);    
         if (MAXCHILDREN == 0) {
             fprintf(stderr, "Invalid MAXCHILDREN\n");
             displayUsage(argv[0]);
+            exit(1);
         }
     }
 }
 
-#define ARGVECTORSIZE 10
+#define ARGVECTORSIZE 4
 #define BUFFERSIZE 128
 
-int command(const char* command, char** argVector) { //TODO meter argVector global?
+int command(const char* command, char** argVector) {
     return strcmp(argVector[0], command) == 0;
+}
+
+int length(char **v, int vSize) {
+    int i;
+    for (i = 0; i < vSize; i++) {
+        if (v[i] == NULL) {
+            break;
+        }
+    }
+    return i;
 }
 
 int main(int argc, char** argv) {
@@ -50,18 +64,17 @@ int main(int argc, char** argv) {
     char buffer[BUFFERSIZE];
 
     int nChilds = 0;
-    vector_t *forks = vector_alloc(1); //TODO tamanho inicial numa variavel
+    vector_t *forks = vector_alloc(1);
     pid_t pid;
     int status;
 
     while (1) {
-        printf("> ");
+        //printf("> ");
         readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
-        //for (int i = 0; i < ARGVECTORSIZE; i++) puts(argVector[i]);
+
         if (command("run", argVector)) {
             while (nChilds >= MAXCHILDREN) {
                 pid = wait(&status);
-                printf("Child %i exited with status %i\n", pid, status);
                 Process proc = process_alloc(pid, status);
                 vector_pushBack(forks, proc);
                 nChilds--;
@@ -72,17 +85,20 @@ int main(int argc, char** argv) {
                 exit(1);
             }
             if (pid == 0) {
-                status = execl("./CircuitRouter-SeqSolver", argVector[1]);
-                printf("I'm child  %i and I finished execl with status %i\n", getpid(), status);
+                if (length(argVector, ARGVECTORSIZE) != 2) {
+                    fprintf(stderr, "run must receive (only) <inputfile>\n");
+                    displayUsage(argv[0]);
+                }
+                char* execArgs[] =  {"CircuitRouter-SeqSolver", argVector[1], NULL};
+                status = execv("CircuitRouter-SeqSolver/CircuitRouter-SeqSolver", execArgs);
+                printf("%i\n", status);
                 exit(status);
             } else {
-                printf("My child is %i\n", pid);
                 nChilds++;
             }
         } else if (command("exit", argVector)) {
             while (nChilds > 0) {
                 pid = wait(&status);
-                printf("Child %i exited with status %i\n", pid, status);
                 Process proc = process_alloc(pid, status);
                 vector_pushBack(forks, proc);
                 nChilds--;
@@ -95,3 +111,5 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+
+
