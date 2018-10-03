@@ -48,9 +48,9 @@ int command(const char* command, char** argVector) {
     return strcmp(argVector[0], command) == 0;
 }
 
-int length(char **v, int vSize) {
+int length(char **v, int vCapacity) {
     int i;
-    for (i = 0; i < vSize; i++) {
+    for (i = 0; i < vCapacity; i++) {
         if (v[i] == NULL) {
             break;
         }
@@ -76,7 +76,6 @@ int main(int argc, char** argv) {
     vector_t *forks = vector_alloc(1);
 
     while (1) {
-        //printf("> "); //TODO se o programa troca-se todo??
         readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
 
         if (command("run", argVector)) {
@@ -86,18 +85,15 @@ int main(int argc, char** argv) {
             pid_t pid = fork(); 
             if (pid == -1) {
                 fprintf(stderr, "Error creating child process.\n");
-                exit(1); //TODO posso continuar a correr ou?
+                exit(1);
             }
             if (pid == 0) {
                 if (length(argVector, ARGVECTORSIZE) != 2) {
-                    fprintf(stderr, "run must receive (only) <inputfile>\n");
+                    fprintf(stderr, "run must (only) receive <inputfile>\n");
                     displayUsage(argv[0]);
                 }
                 char* execArgs[] =  {"CircuitRouter-SeqSolver", argVector[1], NULL};
-                printf("CARALHO1");
-                fflush(stdout);
-                int status = execv("CircuitRouter-SeqSolver/CircuitRouter-SeqSolver", execArgs);
-                exit(status);
+                execv("CircuitRouter-SeqSolver/CircuitRouter-SeqSolver", execArgs);
             } else {
                 nChildren++;
             }
@@ -110,7 +106,7 @@ int main(int argc, char** argv) {
             for (int i = 0; i < vector_getSize(forks); i++) {
                 p = vector_at(forks, i);
                 printf("CHILD EXITED (PID=%i; return %s)\n", p_getpid(p), 
-                        p_getstatus(p) >= 0 ? "OK" : "NOK");//TODO quais sao os returns
+                        p_getstatus(p) == 0 ? "OK" : "NOK");
             }
             break;
         } else {
@@ -120,5 +116,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-
-
