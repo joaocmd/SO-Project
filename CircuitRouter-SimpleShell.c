@@ -58,7 +58,9 @@ int length(char **v, int vSize) {
     return i;
 }
 
-void waitAndSave(vector_t *childs, int *nChildren) {
+void waitAndSave(vector_t *forks, int *nChildren) {
+    pid_t pid;
+    int status;
     pid = wait(&status);
     Process proc = process_alloc(pid, status);
     vector_pushBack(forks, proc);
@@ -72,21 +74,19 @@ int main(int argc, char** argv) {
 
     int nChildren = 0;
     vector_t *forks = vector_alloc(1);
-    pid_t pid;
-    int status;
 
     while (1) {
-        //printf("> "); //TODO se o programa troca-se todo
+        //printf("> "); //TODO se o programa troca-se todo??
         readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
 
         if (command("run", argVector)) {
             while (nChildren >= MAXCHILDREN) {
-                waitAndSave(forks, %nChildren);
+                waitAndSave(forks, &nChildren);
             }
             pid_t pid = fork(); 
             if (pid == -1) {
                 fprintf(stderr, "Error creating child process.\n");
-                exit(1);
+                exit(1); //TODO posso continuar a correr ou?
             }
             if (pid == 0) {
                 if (length(argVector, ARGVECTORSIZE) != 2) {
@@ -94,17 +94,24 @@ int main(int argc, char** argv) {
                     displayUsage(argv[0]);
                 }
                 char* execArgs[] =  {"CircuitRouter-SeqSolver", argVector[1], NULL};
-                status = execv("CircuitRouter-SeqSolver/CircuitRouter-SeqSolver", execArgs);
-                printf("%i\n", status);
+                printf("CARALHO1");
+                fflush(stdout);
+                int status = execv("CircuitRouter-SeqSolver/CircuitRouter-SeqSolver", execArgs);
                 exit(status);
             } else {
                 nChildren++;
             }
         } else if (command("exit", argVector)) {
             while (nChildren > 0) {
-                waitAndSave(forks, %nChildren);
+                waitAndSave(forks, &nChildren);
             }
-            
+             
+            Process p;
+            for (int i = 0; i < vector_getSize(forks); i++) {
+                p = vector_at(forks, i);
+                printf("CHILD EXITED (PID=%i; return %s)\n", p_getpid(p), 
+                        p_getstatus(p) >= 0 ? "OK" : "NOK");//TODO quais sao os returns
+            }
             break;
         } else {
             fprintf(stderr, "Invalid command\n");
