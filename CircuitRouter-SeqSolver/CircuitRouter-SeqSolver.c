@@ -1,3 +1,4 @@
+//TODO Se passarmos um ficheiro que nao da para ler e criado output na mesma
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * This code is an adaptation of the Lee algorithm's implementation originally included in the STAMP Benchmark
  * by Stanford University.
@@ -138,7 +139,7 @@ static void parseArgs (long argc, char* const argv[]){
     }
 
     if (argc - optind != 1) {
-        fprintf(stderr, "%s must receive (only) one non-option argument. (Input file)\n", 
+        fprintf(stderr, "%s must receive (only) one non-option argument (input file).\n", 
                          argv[0]);
         opterr++;
     }
@@ -148,6 +149,25 @@ static void parseArgs (long argc, char* const argv[]){
     } else {
         displayUsage(argv[0]);
     }
+}
+
+FILE *generateOutputFile() {
+    char outputFile[strlen(global_inputFile) + strlen(".res") + 1];
+    sprintf(outputFile, "%s.res", global_inputFile);
+    /*
+     * Check if file exists
+     */
+    if (access(outputFile, F_OK) != -1) {
+        char oldOutputFile[strlen(outputFile) + strlen(".old") + 1];
+        sprintf(oldOutputFile, "%s.old", outputFile);
+        rename(outputFile, oldOutputFile);
+    }
+    FILE *outputFP = fopen(outputFile, "w");
+    if (outputFP == NULL) {
+        fprintf(stderr, "Error creating output file.\n");
+        exit(1);
+    }
+    return outputFP;
 }
 
 /* =============================================================================
@@ -164,26 +184,10 @@ int main(int argc, char** argv){
 
     FILE *inputFP = fopen(global_inputFile, "r");
     if (inputFP == NULL) {
-        fprintf(stderr, "Invalid input file: %s\n", global_inputFile);
+        fprintf(stderr, "Invalid input file: %s.\n", global_inputFile);
         exit(1);
     }
-
-    char outputFile[strlen(global_inputFile) + strlen(".res") + 1];
-    sprintf(outputFile, "%s.res", global_inputFile);
-    /*
-     * Check if file exists
-     */
-    if (access(outputFile, F_OK) != -1) {
-        char oldOutputFile[strlen(outputFile) + strlen(".old") + 1];
-        sprintf(oldOutputFile, "%s.old", outputFile);
-        rename(outputFile, oldOutputFile);
-    }
-
-    FILE *outputFP = fopen(outputFile, "w");
-    if (outputFP == NULL) {
-        fprintf(stderr, "Error creating output file.\n");
-        exit(1);
-    }
+    FILE *outputFP = generateOutputFile();
 
     long numPathToRoute = maze_read(mazePtr, inputFP, outputFP);
     fclose(inputFP);

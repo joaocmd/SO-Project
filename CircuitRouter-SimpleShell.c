@@ -16,13 +16,17 @@
 #include "finprocess.h"
 
 unsigned int MAXCHILDREN = UINT_MAX;
+#define CH_APPNAME "CircuitRouter"
+#define CH_APPPATH "CircuitRouter-SeqSolver/CircuitRouter-SeqSolver"
+#define ARGVECTORSIZE 4
+#define BUFFERSIZE 128
 
 void displayUsage(const char* appName) {
     printf("Usage: %s\n", appName);
     printf("Additional Argument:                              (default)\n");
     printf("    MAXCHILDREN <ULONG>   child processes limit   ULONG_MAX\n");
-    printf("\nShell:\n");
-    printf("    run <inputfile>       runs CircuitRouter-SeqSolver with <inputfile>\n");
+    printf("Shell:\n");
+    printf("    run <inputfile>       runs %s with <inputfile>\n", CH_APPNAME);
     printf("    exit                  exits the console\n");
 }
 
@@ -34,21 +38,18 @@ void parseArgs(int argc, char** argv) {
     if (argc == 2) {
         MAXCHILDREN = strtoul(argv[1], NULL, 10);    
         if (MAXCHILDREN == 0) {
-            fprintf(stderr, "Invalid MAXCHILDREN\n");
+            fprintf(stderr, "Invalid MAXCHILDREN.\n");
             displayUsage(argv[0]);
             exit(1);
         }
     }
 }
 
-#define ARGVECTORSIZE 4
-#define BUFFERSIZE 128
-
 int command(const char* command, char** argVector) {
     return strcmp(argVector[0], command) == 0;
 }
 
-int length(char **v, int vCapacity) {
+int length(char **v, int vCapacity) { //TODO ficheiro diferente
     int i;
     for (i = 0; i < vCapacity; i++) {
         if (v[i] == NULL) {
@@ -73,7 +74,7 @@ int main(int argc, char** argv) {
     char buffer[BUFFERSIZE];
 
     int nChildren = 0;
-    vector_t *forks = vector_alloc(1);
+    vector_t *forks = vector_alloc(4);
 
     while (1) {
         readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
@@ -89,11 +90,16 @@ int main(int argc, char** argv) {
             }
             if (pid == 0) {
                 if (length(argVector, ARGVECTORSIZE) != 2) {
-                    fprintf(stderr, "run must (only) receive <inputfile>\n");
+                    fprintf(stderr, "run must (only) receive <inputfile>.\n");
                     displayUsage(argv[0]);
+                    exit(1);
                 }
-                char* execArgs[] =  {"CircuitRouter-SeqSolver", argVector[1], NULL};
-                execv("CircuitRouter-SeqSolver/CircuitRouter-SeqSolver", execArgs);
+                char* execArgs[] =  {CH_APPNAME, argVector[1], NULL};
+                int status = execv(CH_APPPATH, execArgs);
+                if (status < 0) {
+                    fprintf(stderr, "Error executing binary.\n");
+                    exit(1);
+                }
             } else {
                 nChildren++;
             }
@@ -110,7 +116,8 @@ int main(int argc, char** argv) {
             }
             break;
         } else {
-            fprintf(stderr, "Invalid command\n");
+            fprintf(stderr, "Invalid command %s\n", argVector[0]);
+            displayUsage(argv[0]);
         }
     }
 
