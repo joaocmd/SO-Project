@@ -13,14 +13,18 @@
 #include <string.h>
 #include "lib/commandlinereader.h"
 #include "lib/vector.h"
+#include "lib/types.h"
 #include "finprocess.h"
 
 unsigned int MAXCHILDREN = UINT_MAX;
 #define CH_APPNAME "CircuitRouter"
 #define CH_APPPATH "CircuitRouter-SeqSolver/CircuitRouter-SeqSolver"
 #define ARGVECTORSIZE 4
-#define BUFFERSIZE 128
+#define BUFFERSIZE 256
 
+/*
+ * displayUsage
+*/
 void displayUsage(const char* appName) {
     printf("Usage: %s\n", appName);
     printf("Additional Argument:                              (default)\n");
@@ -30,6 +34,9 @@ void displayUsage(const char* appName) {
     printf("    exit                  exits the console\n");
 }
 
+/*
+ * parseArgs
+*/
 void parseArgs(int argc, char** argv) {
     if (argc > 2) {
         displayUsage(argv[0]);
@@ -45,10 +52,16 @@ void parseArgs(int argc, char** argv) {
     }
 }
 
+/*
+ * command: returns whether the command matches the first argument in argVector.
+*/
 int command(const char* command, char** argVector) {
     return strcmp(argVector[0], command) == 0;
 }
 
+/*
+ * length: returns how many non-NULL entries are in vector v.
+*/
 int length(char **v, int vCapacity) { //TODO ficheiro diferente
     int i;
     for (i = 0; i < vCapacity; i++) {
@@ -59,13 +72,34 @@ int length(char **v, int vCapacity) { //TODO ficheiro diferente
     return i;
 }
 
+/*
+ * waitAndSave: waits for a process to finish. Creates a finished process 
+ * and pushes it to the forks vector.
+*/
 void waitAndSave(vector_t *forks, int *nChildren) {
     pid_t pid;
     int status;
     pid = wait(&status);
-    Process proc = process_alloc(pid, status);
+    process *proc = process_alloc(pid, status);
     vector_pushBack(forks, proc);
     (*nChildren)--;
+}
+
+/*
+ * freeForks: frees the allocated memory for the finished processes vector.
+ * Prints the pid and exit status of child processes if printProcesses is true.
+*/
+void freeForks(vector_t *forks, bool_t printProcesses) {
+    process *proc;
+    for (int i = 0; i < vector_getSize(forks); i++) {
+        proc = vector_at(forks, i);
+        if (printProcesses) {
+            printf("CHILD EXITED (PID=%i; return %s)\n", p_getpid(proc), 
+                    p_getstatus(proc) == 0 ? "OK" : "NOK");
+        }
+        process_free(proc);
+    }
+    vector_free(forks);
 }
 
 int main(int argc, char** argv) {
@@ -86,19 +120,21 @@ int main(int argc, char** argv) {
             pid_t pid = fork(); 
             if (pid == -1) {
                 fprintf(stderr, "Error creating child process.\n");
+                freeForks(forks, FALSE);  
                 exit(1);
             }
             if (pid == 0) {
                 if (length(argVector, ARGVECTORSIZE) != 2) {
                     fprintf(stderr, "run must (only) receive <inputfile>.\n");
                     displayUsage(argv[0]);
+                    freeForks(forks, FALSE);  //TODO necessario?
                     exit(1);
                 }
                 char* execArgs[] =  {CH_APPNAME, argVector[1], NULL};
-                int status = execv(CH_APPPATH, execArgs);
-                if (status < 0) {
-                    fprintf(stderr, "Error executing binary.\n");
-                    exit(1);
+                execv(CH_APPPATH, execArgs);
+                // Only runs if execv failed
+                freeForks(forks, FALSE);  
+                exit(1);
                 }
             } else {
                 nChildren++;
@@ -107,13 +143,7 @@ int main(int argc, char** argv) {
             while (nChildren > 0) {
                 waitAndSave(forks, &nChildren);
             }
-             
-            Process p;
-            for (int i = 0; i < vector_getSize(forks); i++) {
-                p = vector_at(forks, i);
-                printf("CHILD EXITED (PID=%i; return %s)\n", p_getpid(p), 
-                        p_getstatus(p) == 0 ? "OK" : "NOK");
-            }
+            freeForks(forks, TRUE);  
             break;
         } else {
             fprintf(stderr, "Invalid command %s\n", argVector[0]);
@@ -121,5 +151,5 @@ int main(int argc, char** argv) {
         }
     }
 
-    return 0;
+    exit(0);
 }

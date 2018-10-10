@@ -151,6 +151,11 @@ static void parseArgs (long argc, char* const argv[]){
     }
 }
 
+/* =============================================================================
+ * generateOutputFile
+ * -- Returns pointer to output file. Returns NULL if failed.
+ * =============================================================================
+ */
 FILE *generateOutputFile() {
     char outputFile[strlen(global_inputFile) + strlen(".res") + 1];
     sprintf(outputFile, "%s.res", global_inputFile);
@@ -163,10 +168,6 @@ FILE *generateOutputFile() {
         rename(outputFile, oldOutputFile);
     }
     FILE *outputFP = fopen(outputFile, "w");
-    if (outputFP == NULL) {
-        fprintf(stderr, "Error creating output file.\n");
-        exit(1);
-    }
     return outputFP;
 }
 
@@ -188,6 +189,10 @@ int main(int argc, char** argv){
         exit(1);
     }
     FILE *outputFP = generateOutputFile();
+    if (outputFP == NULL) {
+        fprintf(stderr, "Error creating output file.\n");
+        exit(1);
+    }
 
     long numPathToRoute = maze_read(mazePtr, inputFP, outputFP);
     fclose(inputFP);

@@ -9,21 +9,21 @@
 #include <sys/types.h>
 #include "finprocess.h"
 
-Process process_alloc(pid_t pid, int status) {
-    Process p = malloc(sizeof(struct fprocess));
+process *process_alloc(pid_t pid, int status) {
+    process *p = malloc(sizeof(struct fprocess));
     p->pid = pid;
     p->status = status;
     return p;
 }
 
-void free_process(Process p) {
+void process_free(process *p) {
     free(p);
 }
 
-pid_t p_getpid(Process p) {
+pid_t p_getpid(process *p) {
     return p->pid;
 }
 
-int p_getstatus(Process p) {
+int p_getstatus(process *p) {
     return p->status;
 }

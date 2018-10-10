@@ -9,24 +9,34 @@
 
 #include <sys/types.h>
 
-typedef struct fprocess *Process;
-// Represents a process that has finished.
+/*
+ * Represents a process that has finished.
+*/
+typedef struct fprocess process;
 struct fprocess {
     pid_t pid;
     int status;
 };
 
-// process_alloc: allocs memory and initializes a finished process struct, 
-// returns it's pointer.
-Process process_alloc(pid_t pid, int status);
+/*
+ * process_alloc: allocs memory and initializes a finished process struct, 
+ * returns it's pointer.
+*/
+process *process_alloc(pid_t pid, int status);
 
-// free_process: frees the allocated memory for a finished process.
-void free_process(Process p);
+/*
+ * process_free: frees the allocated memory for a finished process.
+*/
+void process_free(process *p);
 
-// p_getpid: returns the PID of the finished process.
-pid_t p_getpid(Process p);
+/*
+ * p_getpid: returns the PID of the finished process.
+*/
+pid_t p_getpid(process *p);
 
-// p_getstatus: returns the exit status of the finished process.
-int p_getstatus(Process p);
+/*
+ * p_getstatus: returns the exit status of the finished process.
+*/
+int p_getstatus(process *p);
 
 #endif
