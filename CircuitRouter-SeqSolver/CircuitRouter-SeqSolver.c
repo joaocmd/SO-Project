@@ -1,4 +1,3 @@
-//TODO Se passarmos um ficheiro que nao da para ler e criado output na mesma
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * This code is an adaptation of the Lee algorithm's implementation originally included in the STAMP Benchmark
  * by Stanford University.

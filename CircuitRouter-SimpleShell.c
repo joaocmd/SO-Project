@@ -11,14 +11,15 @@
 #include <sys/wait.h>
 #include <limits.h>
 #include <string.h>
-#include "lib/commandlinereader.h"
-#include "lib/vector.h"
-#include "lib/types.h"
+#include "commandlinereader.h"
+#include "vector.h"
+#include "types.h"
 #include "finprocess.h"
 
 unsigned int MAXCHILDREN = UINT_MAX;
 #define CH_APPNAME "CircuitRouter"
 #define CH_APPPATH "CircuitRouter-SeqSolver/CircuitRouter-SeqSolver"
+#define FORKVECINITSIZE 4
 #define ARGVECTORSIZE 4
 #define BUFFERSIZE 256
 
@@ -28,7 +29,7 @@ unsigned int MAXCHILDREN = UINT_MAX;
 void displayUsage(const char* appName) {
     printf("Usage: %s\n", appName);
     printf("Additional Argument:                              (default)\n");
-    printf("    MAXCHILDREN <ULONG>   child processes limit   ULONG_MAX\n");
+    printf("    MAXCHILDREN <ULONG+>  child processes limit   ULONG_MAX\n");
     printf("Shell:\n");
     printf("    run <inputfile>       runs %s with <inputfile>\n", CH_APPNAME);
     printf("    exit                  exits the console\n");
@@ -60,9 +61,9 @@ int command(const char* command, char** argVector) {
 }
 
 /*
- * length: returns how many non-NULL entries are in vector v.
+ * length: returns how many non-NULL entries are in vector v (stops at first).
 */
-int length(char **v, int vCapacity) { //TODO ficheiro diferente
+int length(char **v, int vCapacity) {
     int i;
     for (i = 0; i < vCapacity; i++) {
         if (v[i] == NULL) {
@@ -70,19 +71,6 @@ int length(char **v, int vCapacity) { //TODO ficheiro diferente
         }
     }
     return i;
-}
-
-/*
- * waitAndSave: waits for a process to finish. Creates a finished process 
- * and pushes it to the forks vector.
-*/
-void waitAndSave(vector_t *forks, int *nChildren) {
-    pid_t pid;
-    int status;
-    pid = wait(&status);
-    process *proc = process_alloc(pid, status);
-    vector_pushBack(forks, proc);
-    (*nChildren)--;
 }
 
 /*
@@ -102,13 +90,31 @@ void freeForks(vector_t *forks, bool_t printProcesses) {
     vector_free(forks);
 }
 
+/*
+ * waitAndSave: waits for a process to finish. Creates a finished process 
+ * and pushes it to the forks vector.
+*/
+void waitAndSave(vector_t *forks, int *nChildren) {
+    pid_t pid;
+    int status;
+    pid = wait(&status);
+    if (pid < 0) {
+        fprintf(stderr, "Something went wrong waiting for child process.\n"); 
+        freeForks(forks, FALSE);
+        exit(1);
+    }
+    process *proc = process_alloc(pid, status);
+    vector_pushBack(forks, proc);
+    (*nChildren)--;
+}
+
 int main(int argc, char** argv) {
     parseArgs(argc, argv);
     char *argVector[ARGVECTORSIZE];
     char buffer[BUFFERSIZE];
 
     int nChildren = 0;
-    vector_t *forks = vector_alloc(4);
+    vector_t *forks = vector_alloc(FORKVECINITSIZE);
 
     while (1) {
         readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
@@ -127,7 +133,7 @@ int main(int argc, char** argv) {
                 if (length(argVector, ARGVECTORSIZE) != 2) {
                     fprintf(stderr, "run must (only) receive <inputfile>.\n");
                     displayUsage(argv[0]);
-                    freeForks(forks, FALSE);  //TODO necessario?
+                    freeForks(forks, FALSE);
                     exit(1);
                 }
                 char* execArgs[] =  {CH_APPNAME, argVector[1], NULL};
@@ -135,11 +141,11 @@ int main(int argc, char** argv) {
                 // Only runs if execv failed
                 freeForks(forks, FALSE);  
                 exit(1);
-                }
             } else {
                 nChildren++;
             }
         } else if (command("exit", argVector)) {
+            fprintf(stdout, "Exiting shell...\n");
             while (nChildren > 0) {
                 waitAndSave(forks, &nChildren);
             }
@@ -149,6 +155,7 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Invalid command %s\n", argVector[0]);
             displayUsage(argv[0]);
         }
+        
     }
 
     exit(0);

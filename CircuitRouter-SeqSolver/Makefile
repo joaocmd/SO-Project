@@ -12,16 +12,9 @@ TARGET = CircuitRouter-SeqSolver
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
+	@echo target
 	$(CC) $(CFLAGS) $^ -o $(TARGET) $(LDFLAGS) 
 
-run:
-	./CircuitRouter-SeqSolver inputs/random-x32-y32-z3-n64.txt
-runTwoFiles:
-	./CircuitRouter-SeqSolver inputs/random-x22-y32-z3-n64.txt inputs/randomxxx
-runFlags:
-	./CircuitRouter-SeqSolver -h -h -h inputs/random-x32-y32-z3-n64.txt -h -h -h
-runWrongFile:
-	./CircuitRouter-SeqSolver inputs/random-x22-y32-z3-n64.txt
 CircuitRouter-SeqSolver.o: CircuitRouter-SeqSolver.c maze.h router.h ../lib/list.h ../lib/timer.h ../lib/types.h
 router.o: router.c router.h coordinate.h grid.h ../lib/queue.h ../lib/vector.h
 maze.o: maze.c maze.h coordinate.h grid.h ../lib/list.h ../lib/queue.h ../lib/pair.h ../lib/types.h ../lib/vector.h
@@ -38,5 +31,3 @@ $(OBJS):
 clean:
 	@echo Cleaning...
 	rm -f $(OBJS) $(TARGET)
-
-
