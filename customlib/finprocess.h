@@ -9,20 +9,22 @@
 
 #include <sys/types.h>
 
+typedef enum {OK, NOK} status_t;
+
 /*
  * Represents a process that has finished.
 */
 typedef struct fprocess process;
 struct fprocess {
     pid_t pid;
-    int status;
+    status_t status;
 };
 
 /*
  * process_alloc: allocs memory and initializes a finished process struct, 
  * returns it's pointer.
 */
-process *process_alloc(pid_t pid, int status);
+process *process_alloc(pid_t pid, status_t status);
 
 /*
  * process_free: frees the allocated memory for a finished process.

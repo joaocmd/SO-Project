@@ -4,16 +4,16 @@
 * Gonçalo Almeida, 89448
 */
 
+#include "finprocess.h"
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include "finprocess.h"
 
 /*
  * process_alloc: allocs memory and initializes a finished process struct, 
  * returns it's pointer.
 */
-process *process_alloc(pid_t pid, int status) {
+process *process_alloc(pid_t pid, status_t status) {
     process *p = malloc(sizeof(struct fprocess));
     p->pid = pid;
     p->status = status;

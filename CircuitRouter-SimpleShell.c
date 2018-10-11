@@ -28,8 +28,8 @@ unsigned int MAXCHILDREN = UINT_MAX;
  * displayUsage
 */
 void displayUsage(const char* appName) {
-    printf("Usage: %s\n", appName);
-    printf("Additional Argument:                              (default)\n");
+    printf("Usage: %s <optional argument>\n", appName);
+    printf("Optional Argument:                                (default)\n");
     printf("    MAXCHILDREN <ULONG+>  child processes limit   ULONG_MAX\n");
     printf("Shell:\n");
     printf("    run <inputfile>       runs %s with <inputfile>\n", CH_APPNAME);
@@ -84,7 +84,7 @@ void freeForks(vector_t *forks, bool_t printProcesses) {
         proc = vector_at(forks, i);
         if (printProcesses) {
             printf("CHILD EXITED (PID=%i; return %s)\n", p_getpid(proc), 
-                    p_getstatus(proc) == 0 ? "OK" : "NOK");
+                    p_getstatus(proc) == OK ? "OK" : "NOK");
         }
         process_free(proc);
     }
@@ -98,6 +98,7 @@ void freeForks(vector_t *forks, bool_t printProcesses) {
 void waitAndSave(vector_t *forks, int *nChildren) {
     pid_t pid;
     int status;
+    status_t pstatus = OK;
     pid = wait(&status);
     if (pid < 0) {
         if (errno == EINTR) {
@@ -105,11 +106,14 @@ void waitAndSave(vector_t *forks, int *nChildren) {
             waitAndSave(forks, nChildren);
             return;
         } 
-        fprintf(stderr, "Something went wrong waiting for child process.\n"); 
+        fprintf(stderr, "Error waiting for child process.\n"); 
         freeForks(forks, FALSE);
         exit(1);
     }
-    process *proc = process_alloc(pid, status);
+    if (WIFEXITED(status) == 0 || WEXITSTATUS(status) != 0) {
+        pstatus = NOK;
+    }
+    process *proc = process_alloc(pid, pstatus);
     vector_pushBack(forks, proc);
     (*nChildren)--;
 }
@@ -124,8 +128,14 @@ int main(int argc, char** argv) {
 
     while (1) {
         readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
-
+        // Ignore empty prompts
+        if (length(argVector, ARGVECTORSIZE) == 0) continue;
         if (command("run", argVector)) {
+            if (length(argVector, ARGVECTORSIZE) != 2) {
+                fprintf(stderr, "run must (only) receive <inputfile>.\n");
+                displayUsage(argv[0]);
+                continue;
+            }
             while (nChildren >= MAXCHILDREN) {
                 waitAndSave(forks, &nChildren);
             }
@@ -136,12 +146,6 @@ int main(int argc, char** argv) {
                 exit(1);
             }
             if (pid == 0) {
-                if (length(argVector, ARGVECTORSIZE) != 2) {
-                    fprintf(stderr, "run must (only) receive <inputfile>.\n");
-                    displayUsage(argv[0]);
-                    freeForks(forks, FALSE);
-                    exit(1);
-                }
                 char* execArgs[] =  {CH_APPNAME, argVector[1], NULL};
                 execv(CH_APPPATH, execArgs);
                 // Only runs if execv failed
@@ -161,7 +165,6 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Invalid command %s\n", argVector[0]);
             displayUsage(argv[0]);
         }
-        
     }
 
     exit(0);
