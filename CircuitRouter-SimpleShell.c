@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <limits.h>
@@ -99,6 +100,11 @@ void waitAndSave(vector_t *forks, int *nChildren) {
     int status;
     pid = wait(&status);
     if (pid < 0) {
+        if (errno == EINTR) {
+            // Wait again because the wait was interrupted by signal.
+            waitAndSave(forks, nChildren);
+            return;
+        } 
         fprintf(stderr, "Something went wrong waiting for child process.\n"); 
         freeForks(forks, FALSE);
         exit(1);
