@@ -128,11 +128,11 @@ int main(int argc, char** argv) {
 
     while (1) {
         readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
-        int nCommands = length(argVector, ARGVECTORSIZE);
+        int nArgs = length(argVector, ARGVECTORSIZE);
         // Ignore empty prompts
-        if (nCommands == 0) continue;
+        if (nArgs == 0) continue;
         if (command("run", argVector)) {
-            if (nCommands != 2) {
+            if (nArgs != 2) {
                 fprintf(stderr, "run must (only) receive <inputfile>.\n");
                 displayUsage(argv[0]);
                 continue;
