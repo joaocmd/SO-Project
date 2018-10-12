@@ -13,7 +13,7 @@
  * process_alloc: allocs memory and initializes a finished process struct, 
  * returns it's pointer.
 */
-process *process_alloc(pid_t pid, status_t status) {
+process *process_alloc(pid_t pid, pstatus_t status) {
     process *p = malloc(sizeof(struct fprocess));
     p->pid = pid;
     p->status = status;

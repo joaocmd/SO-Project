@@ -98,7 +98,7 @@ void freeForks(vector_t *forks, bool_t printProcesses) {
 void waitAndSave(vector_t *forks, int *nChildren) {
     pid_t pid;
     int status;
-    status_t pstatus = OK;
+    pstatus_t pstatus = OK;
     pid = wait(&status);
     if (pid < 0) {
         if (errno == EINTR) {
@@ -128,14 +128,16 @@ int main(int argc, char** argv) {
 
     while (1) {
         readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
+        int nCommands = length(argVector, ARGVECTORSIZE);
         // Ignore empty prompts
-        if (length(argVector, ARGVECTORSIZE) == 0) continue;
+        if (nCommands == 0) continue;
         if (command("run", argVector)) {
-            if (length(argVector, ARGVECTORSIZE) != 2) {
+            if (nCommands != 2) {
                 fprintf(stderr, "run must (only) receive <inputfile>.\n");
                 displayUsage(argv[0]);
                 continue;
             }
+            // Should only run once (nChildren == MAXCHILDREN)
             while (nChildren >= MAXCHILDREN) {
                 waitAndSave(forks, &nChildren);
             }
