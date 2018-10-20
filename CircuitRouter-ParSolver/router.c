@@ -295,9 +295,7 @@ static vector_t* doTraceback (grid_t* gridPtr, grid_t* myGridPtr, coordinate_t* 
  */
 void* router_solve (void* argPtr){
 
-    //TODO define arguments to receive, queue, grid, and create myGridPtr and such.
-    //workQueuePtr, myGridPtr, gridPtr(global), routerPtr, myExpansionQueuePtr,
-    //bendCost,
+    //TODO ver se os argumentos estao bem
 
     router_solve_arg_t* routerArgPtr = (router_solve_arg_t*)argPtr;
     router_t* routerPtr = routerArgPtr->routerPtr;

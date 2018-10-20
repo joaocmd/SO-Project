@@ -192,9 +192,6 @@ int main(int argc, char** argv){
         fprintf(stderr, "Error creating output file.\n");
         exit(1);
     }
-    if (getpid()%2 == 0) {
-        fprintf(outputFP, "Parent PID was: %i\n", getppid());
-    }
 
     long numPathToRoute = maze_read(mazePtr, inputFP, outputFP);
     fclose(inputFP);

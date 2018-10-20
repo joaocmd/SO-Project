@@ -113,7 +113,6 @@ int main(int argc, char** argv) {
     int nChildren = 0;
     vector_t *forks = vector_alloc(FORKVECINITSIZE);
 
-    printf("Shell PID: %i\n", getpid());
     while (1) {
         int nArgs = readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
         // Ignore empty prompts
