@@ -57,6 +57,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 #include "lib/list.h"
 #include "maze.h"
 #include "router.h"
@@ -64,10 +65,11 @@
 #include "lib/types.h"
 
 enum param_types {
-    PARAM_BENDCOST = (unsigned char)'b',
-    PARAM_XCOST    = (unsigned char)'x',
-    PARAM_YCOST    = (unsigned char)'y',
-    PARAM_ZCOST    = (unsigned char)'z',
+    PARAM_NUMTHREADS = (unsigned char)'t',
+    PARAM_BENDCOST   = (unsigned char)'b',
+    PARAM_XCOST      = (unsigned char)'x',
+    PARAM_YCOST      = (unsigned char)'y',
+    PARAM_ZCOST      = (unsigned char)'z',
 };
 
 enum param_defaults {
@@ -89,6 +91,7 @@ long global_params[256]; /* 256 = ascii limit */
 static void displayUsage (const char* appName){
     printf("Usage: %s <inputfile> [options]\n", appName);
     puts("\nOptions:                            (defaults)\n");
+    printf("    t <UINT>   [t] num threads      MANDATORY\n");
     printf("    b <INT>    [b]end cost          (%i)\n", PARAM_DEFAULT_BENDCOST);
     printf("    x <UINT>   [x] movement cost    (%i)\n", PARAM_DEFAULT_XCOST);
     printf("    y <UINT>   [y] movement cost    (%i)\n", PARAM_DEFAULT_YCOST);
@@ -118,11 +121,14 @@ static void parseArgs (long argc, char* const argv[]){
     long opt;
 
     opterr = 0;
+    long t = -1;
 
     setDefaultParams();
 
-    while ((opt = getopt(argc, argv, "hb:x:y:z:")) != -1) {
+    while ((opt = getopt(argc, argv, "ht:b:x:y:z:")) != -1) {
         switch (opt) {
+            case 't':
+                t = atol(optarg);
             case 'b':
             case 'x':
             case 'y':
@@ -135,6 +141,12 @@ static void parseArgs (long argc, char* const argv[]){
                 opterr++;
                 break;
         }
+    }
+
+    if (t <= 0) {
+        fprintf(stderr, "%s option -t NUMTHREADS not specified or invalid.\n",
+                         argv[0]);
+        opterr++;
     }
 
     if (argc - optind != 1) {
@@ -192,9 +204,6 @@ int main(int argc, char** argv){
         fprintf(stderr, "Error creating output file.\n");
         exit(1);
     }
-    if (getpid()%2 == 0) {
-        fprintf(outputFP, "Parent PID was: %i\n", getppid());
-    }
 
     long numPathToRoute = maze_read(mazePtr, inputFP, outputFP);
     fclose(inputFP);
@@ -207,10 +216,18 @@ int main(int argc, char** argv){
     assert(pathVectorListPtr);
 
     router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr};
+    pthread_t tids[PARAM_NUMTHREADS];
+    
     TIMER_T startTime;
     TIMER_READ(startTime);
 
-    router_solve((void *)&routerArg);
+    //TODO onde comecar o timer?
+    for (int i = 0; i < global_params[PARAM_NUMTHREADS]; i++) {
+        pthread_create(&tids[i], NULL, router_solve, (void*) &routerArg);
+    }
+    for (int i = 0; i < global_params[PARAM_NUMTHREADS]; i++) {
+        pthread_join(tids[i], NULL);
+    }
 
     TIMER_T stopTime;
     TIMER_READ(stopTime);
@@ -233,8 +250,7 @@ int main(int argc, char** argv){
     assert(numPathRouted <= numPathToRoute);
     bool_t status = maze_checkPaths(mazePtr, pathVectorListPtr, global_doPrint, outputFP);
     assert(status == TRUE);
-    fprintf(outputFP, "Verification passed.\n");
-
+    fprintf(outputFP, "Verification passed.");
     fclose(outputFP);
 
     maze_free(mazePtr);

@@ -62,19 +62,6 @@ int command(const char* command, char** argVector) {
 }
 
 /*
- * length: returns how many non-NULL entries are in vector v (stops at first).
-*/
-int length(char **v, int vCapacity) {
-    int i;
-    for (i = 0; i < vCapacity; i++) {
-        if (v[i] == NULL) {
-            break;
-        }
-    }
-    return i;
-}
-
-/*
  * freeForks: frees the allocated memory for the finished processes vector.
  * Prints the pid and exit status of child processes if printProcesses is true.
 */
@@ -126,9 +113,9 @@ int main(int argc, char** argv) {
     int nChildren = 0;
     vector_t *forks = vector_alloc(FORKVECINITSIZE);
 
+    printf("Shell PID: %i\n", getpid());
     while (1) {
-        readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
-        int nArgs = length(argVector, ARGVECTORSIZE);
+        int nArgs = readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
         // Ignore empty prompts
         if (nArgs == 0) continue;
         if (command("run", argVector)) {
