@@ -91,7 +91,7 @@ long global_params[256]; /* 256 = ascii limit */
 static void displayUsage (const char* appName){
     printf("Usage: %s <inputfile> [options]\n", appName);
     puts("\nOptions:                            (defaults)\n");
-    printf("    t <UINT>   [t] num threads      MANDATORY\n");
+    printf("    t <UINT+>  [t] num threads      MANDATORY\n");
     printf("    b <INT>    [b]end cost          (%i)\n", PARAM_DEFAULT_BENDCOST);
     printf("    x <UINT>   [x] movement cost    (%i)\n", PARAM_DEFAULT_XCOST);
     printf("    y <UINT>   [y] movement cost    (%i)\n", PARAM_DEFAULT_YCOST);
@@ -128,7 +128,8 @@ static void parseArgs (long argc, char* const argv[]){
     while ((opt = getopt(argc, argv, "ht:b:x:y:z:")) != -1) {
         switch (opt) {
             case 't':
-                t = atol(optarg);
+                t = global_params[(unsigned char)opt] = strtol(optarg, NULL, 10);
+                break;
             case 'b':
             case 'x':
             case 'y':
@@ -221,7 +222,6 @@ int main(int argc, char** argv){
     TIMER_T startTime;
     TIMER_READ(startTime);
 
-    //TODO onde comecar o timer?
     for (int i = 0; i < global_params[PARAM_NUMTHREADS]; i++) {
         pthread_create(&tids[i], NULL, router_solve, (void*) &routerArg);
     }

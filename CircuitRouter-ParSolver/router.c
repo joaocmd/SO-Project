@@ -288,7 +288,12 @@ static vector_t* doTraceback (grid_t* gridPtr, grid_t* myGridPtr, coordinate_t* 
     return pointVectorPtr;
 }
 
-
+/*
+ * write to global grid mutex
+ * lock while copying
+ */
+pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t grid_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* =============================================================================
  * router_solve
  * =============================================================================
@@ -319,13 +324,18 @@ void* router_solve (void* argPtr){
      */
     while (1) {
 
-        //TODO lock queue for popping
         pair_t* coordinatePairPtr;
+        /*
+         * Lock queue, pop path to compute and unlock.
+         */
+        pthread_mutex_lock(&queue_mutex);
         if (queue_isEmpty(workQueuePtr)) {
             coordinatePairPtr = NULL;
         } else {
             coordinatePairPtr = (pair_t*)queue_pop(workQueuePtr);
         }
+        pthread_mutex_unlock(&queue_mutex);
+        
         if (coordinatePairPtr == NULL) {
             break;
         }
@@ -365,6 +375,8 @@ void* router_solve (void* argPtr){
 
     grid_free(myGridPtr);
     queue_free(myExpansionQueuePtr);
+    //TODO necessary?
+    pthread_exit(NULL);
 }
 
 
