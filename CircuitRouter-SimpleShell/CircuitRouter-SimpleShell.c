@@ -116,6 +116,7 @@ int main(int argc, char** argv) {
     while (1) {
         int nArgs = readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
         // Ignore empty prompts
+        if (nArgs == -1) break;
         if (nArgs == 0) continue;
         if (command("run", argVector)) {
             if (nArgs != 2) {

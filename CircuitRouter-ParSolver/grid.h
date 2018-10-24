@@ -153,9 +153,10 @@ void grid_addPath (grid_t* gridPtr, vector_t* pointVectorPtr);
 
 /* =============================================================================
  * grid_addPath_Ptr
+ * - returns FALSE if it fails adding the path to the grid.
  * =============================================================================
  */
-void grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr);
+bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr);
 
 
 /* =============================================================================

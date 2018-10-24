@@ -223,10 +223,16 @@ int main(int argc, char** argv){
     TIMER_READ(startTime);
 
     for (int i = 0; i < global_params[PARAM_NUMTHREADS]; i++) {
-        pthread_create(&tids[i], NULL, router_solve, (void*) &routerArg);
+        if (pthread_create(&tids[i], NULL, router_solve, (void*) &routerArg)) {
+            fprintf(stderr, "Error creating thread\n");
+            exit(1);
+        }
     }
     for (int i = 0; i < global_params[PARAM_NUMTHREADS]; i++) {
-        pthread_join(tids[i], NULL);
+        if (pthread_join(tids[i], NULL)) {
+            fprintf(stderr, "Error joinning threads\n");
+            exit(1);
+        }
     }
 
     TIMER_T stopTime;

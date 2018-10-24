@@ -56,6 +56,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "coordinate.h"
 #include "grid.h"
 #include "lib/types.h"
@@ -211,20 +212,37 @@ void grid_addPath (grid_t* gridPtr, vector_t* pointVectorPtr){
 }
 
 
+static pthread_mutex_t grid_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* =============================================================================
  * grid_addPath_Ptr
+ * - returns FALSE it if fails adding the path to the grid.
  * =============================================================================
  */
-//TODO verificar se no entanto nao foi adicionado um path que estrague este, dar lock
-//durante a escrita
-void grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr){
+bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr){
+
     long i;
     long n = vector_getSize(pointVectorPtr);
 
+    pthread_mutex_lock(&grid_mutex); 
+    /*
+     * Test if path is still valid.
+     */
+    for (i = 1; i < (n-1); i++) {
+        long* gridPointPtr = (long*)vector_at(pointVectorPtr, i);
+        if (*gridPointPtr == GRID_POINT_FULL) {
+            pthread_mutex_unlock(&grid_mutex); 
+            return FALSE;
+        }
+    }
+    /*
+     * Commit to global grid if it is.
+     */
     for (i = 1; i < (n-1); i++) {
         long* gridPointPtr = (long*)vector_at(pointVectorPtr, i);
         *gridPointPtr = GRID_POINT_FULL; 
     }
+    pthread_mutex_unlock(&grid_mutex); 
+    return TRUE;
 }
 
 
