@@ -164,7 +164,10 @@ FILE *generateOutputFile() {
     if (access(outputFile, F_OK) != -1) {
         char oldOutputFile[strlen(outputFile) + strlen(".old") + 1];
         sprintf(oldOutputFile, "%s.old", outputFile);
-        rename(outputFile, oldOutputFile);
+        if (rename(outputFile, oldOutputFile) == -1) {
+            perror("Error renaming output file.");
+            exit(1);
+        }
     }
     FILE *outputFP = fopen(outputFile, "w");
     return outputFP;

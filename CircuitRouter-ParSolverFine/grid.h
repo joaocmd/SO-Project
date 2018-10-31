@@ -160,7 +160,13 @@ void grid_addPath (grid_t* gridPtr, vector_t* pointVectorPtr);
  */
 bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, locksgrid_t* lgrid);
 
+
+/* =============================================================================
+ * grid_unlockPath
+ * =============================================================================
+ */
 void grid_unlockPath (grid_t* gridPtr, vector_t* pointVectorPtr, locksgrid_t* lgrid, int i);
+
 
 /* =============================================================================
  * grid_printToFile

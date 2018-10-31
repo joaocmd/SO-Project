@@ -84,6 +84,10 @@ bool_t global_doPrint = TRUE;
 char* global_inputFile = NULL;
 long global_params[256]; /* 256 = ascii limit */
 
+pthread_mutex_t pathsqueue_mutex;
+pthread_mutex_t pathlist_mutex;
+locksgrid_t* lgrid;
+
 
 /* =============================================================================
  * displayUsage
@@ -178,7 +182,10 @@ FILE *generateOutputFile() {
     if (access(outputFile, F_OK) != -1) {
         char oldOutputFile[strlen(outputFile) + strlen(".old") + 1];
         sprintf(oldOutputFile, "%s.old", outputFile);
-        rename(outputFile, oldOutputFile);
+        if (rename(outputFile, oldOutputFile) == -1) {
+            perror("Error renaming output file.");
+            exit(1);
+        }
     }
     FILE *outputFP = fopen(outputFile, "w");
     return outputFP;
@@ -220,9 +227,11 @@ int main(int argc, char** argv){
     long gridWidth = mazePtr->gridPtr->width;
     long gridHeight = mazePtr->gridPtr->height; 
     long gridDepth = mazePtr->gridPtr->depth; 
-    locksgrid_t* lgrid = locksgrid_alloc(gridWidth, gridHeight, gridDepth);
+    lgrid = locksgrid_alloc(gridWidth, gridHeight, gridDepth);
+    pthread_mutex_init(&pathsqueue_mutex, NULL);
+    pthread_mutex_init(&pathlist_mutex, NULL);
 
-    router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr, lgrid};
+    router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr};
     pthread_t tids[PARAM_NUMTHREADS];
     
     TIMER_T startTime;
@@ -243,6 +252,10 @@ int main(int argc, char** argv){
 
     TIMER_T stopTime;
     TIMER_READ(stopTime);
+
+    locksgrid_free(lgrid);
+    pthread_mutex_destroy(&pathsqueue_mutex);
+    pthread_mutex_destroy(&pathlist_mutex);
 
     long numPathRouted = 0;
     list_iter_t it;

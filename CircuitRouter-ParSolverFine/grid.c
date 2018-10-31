@@ -141,6 +141,7 @@ long grid_getPointIndex (grid_t* gridPtr, long* gridPointPtr){
      * Since we're subtracting pointers it does the conversion automatically,
      * taking care of the size of each element.
      */
+    printf("%li\n", gridPointPtr - gridPtr->points);
     return (long) (gridPointPtr - gridPtr->points);
 }
 
@@ -228,10 +229,10 @@ void grid_addPath (grid_t* gridPtr, vector_t* pointVectorPtr){
 
 /*==============================================================================
  * grid_pointCmp
- *  Compares two points, p and q should belong to the same grid. The comparation
- *  criteria is just their memory address because they are in a contiguous zone
- *  of memory, and so we can compare their "3d position" by simply comparing
- *  their position on the memory.
+ *  Compares two points, p and q should (must( belong to the same grid. The 
+ *  comparation criteria is just their memory address because they are in a
+ *  contiguous zone of memory, and so we can compare their "3d position" by
+ *  simply comparing their position on the memory.
  *=============================================================================
  */
 static int grid_pointCmp(const void* p, const void* q) {
@@ -250,6 +251,12 @@ bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, locksgrid_t*
     long n = vector_getSize(pointVectorPtr);
     long* src = (long*)vector_at(pointVectorPtr, 0);
     long* dst = (long*)vector_at(pointVectorPtr, n-1);
+
+    /*
+     * The path vector must be sorted so that the paths are checked all in the
+     * direction, avoiding deadlocks, since no path can go back and collide
+     * with itself or another one that was waiting for it.
+     */
     vector_sort(pointVectorPtr, &grid_pointCmp);
 
     /*
@@ -262,12 +269,14 @@ bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, locksgrid_t*
             continue;
         }
         long pointIndex = grid_getPointIndex(gridPtr, gridPointPtr);
+        printf("point = %li / %lli\n", pointIndex, lgrid->dimension);
         pthread_mutex_lock(locksgrid_getLock(lgrid, pointIndex));
         if (*gridPointPtr == GRID_POINT_FULL) {
             grid_unlockPath(gridPtr, pointVectorPtr, lgrid, i);
             return FALSE;
         }
     }
+
     /*
      * Commit to global grid if it is.
      */

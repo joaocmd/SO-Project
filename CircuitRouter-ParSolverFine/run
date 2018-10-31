@@ -1,2 +1,0 @@
-#!/bin/bash
-exec ./CircuitRouter-ParSolver -t 4 ../inputs/random-x32-y32-z3-n64.txt
