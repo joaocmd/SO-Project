@@ -54,6 +54,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "locksgrid.h"
 #include "coordinate.h"
 #include "grid.h"
 #include "lib/queue.h"
@@ -288,6 +289,7 @@ static vector_t* doTraceback (grid_t* gridPtr, grid_t* myGridPtr, coordinate_t* 
     return pointVectorPtr;
 }
 
+//TODO inicializar isto noutro sitio
 static pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t list_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* =============================================================================
@@ -299,6 +301,7 @@ void* router_solve (void* argPtr){
     router_solve_arg_t* routerArgPtr = (router_solve_arg_t*)argPtr;
     router_t* routerPtr = routerArgPtr->routerPtr;
     maze_t* mazePtr = routerArgPtr->mazePtr;
+    locksgrid_t* lgrid = routerArgPtr->lgrid;
     vector_t* myPathVectorPtr = vector_alloc(1);
     assert(myPathVectorPtr);
 
@@ -306,7 +309,7 @@ void* router_solve (void* argPtr){
     queue_t* workQueuePtr = mazePtr->workQueuePtr;
     grid_t* gridPtr = mazePtr->gridPtr;
 
-    // Personal work grid
+    // Local work grid
     grid_t* myGridPtr = grid_alloc(gridPtr->width, gridPtr->height, gridPtr->depth);
     assert(myGridPtr);
     long bendCost = routerPtr->bendCost;
@@ -340,23 +343,30 @@ void* router_solve (void* argPtr){
 
         pair_free(coordinatePairPtr);
 
-        bool_t success = FALSE;
+        bool_t foundPath = FALSE;
         bool_t stillValid;
         vector_t* pointVectorPtr;
 
-        //TODO lock gridPtr so that nothing is written while copying??
         do {
             stillValid = TRUE;
             pointVectorPtr = NULL;
 
+            /*
+             * There's no need to lock the grid while coping it, because
+             * all the filled blocks that are currently in the grid will
+             * be final, since we're verifying if the path is valid before adding.
+             * And so, if we copy a path that is only halfway to being written to
+             * the grid, the expansion will start avoiding it already as if it were
+             * an obstacle (which it is).
+             */
             grid_copy(myGridPtr, gridPtr);/* create a copy of the grid, over which the expansion and trace back phases will be executed. */ 
             if (doExpansion(routerPtr, myGridPtr, myExpansionQueuePtr,
                              srcPtr, dstPtr)) {
                 pointVectorPtr = doTraceback(gridPtr, myGridPtr, dstPtr, bendCost);
                 if (pointVectorPtr) {
-                    stillValid = grid_addPath_Ptr(gridPtr, pointVectorPtr);
+                    stillValid = grid_addPath_Ptr(gridPtr, pointVectorPtr, lgrid);
                     if (stillValid) {
-                        success = TRUE;
+                        foundPath = TRUE;
                     } else {
                         vector_free(pointVectorPtr);
                     }
@@ -364,7 +374,7 @@ void* router_solve (void* argPtr){
             }
         } while (!stillValid);
 
-        if (success) {
+        if (foundPath) {
             bool_t status = vector_pushBack(myPathVectorPtr,(void*)pointVectorPtr);
             assert(status);
         }

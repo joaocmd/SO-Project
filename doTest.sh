@@ -14,9 +14,9 @@ echo "1S,$seqtime,1" >> $outputfile
 
 for i in $(seq 1 $1)
 do
-	CircuitRouter-ParSolver/CircuitRouter-ParSolver -t $i $2
-	partime=$(cat "$2.res" | grep "Elapsed time" | tr -s ' ' | cut -d ' ' -f 4)
-	speedup=$(echo "scale=6; ${seqtime}/${partime}" | bc)
+    CircuitRouter-ParSolverFine/CircuitRouter-ParSolver -t $i $2
+    partime=$(cat "$2.res" | grep "Elapsed time" | tr -s ' ' | cut -d ' ' -f 4)
+    speedup=$(echo "scale=6; ${seqtime}/${partime}" | bc)
     echo "$i,$partime,$speedup" >> $outputfile
 done
 cat $outputfile
