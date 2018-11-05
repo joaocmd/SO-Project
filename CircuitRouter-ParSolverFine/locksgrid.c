@@ -3,6 +3,10 @@
 #include <assert.h>
 #include "locksgrid.h"
 
+/* =============================================================================
+ * locksgrid_alloc
+ * =============================================================================
+ */
 locksgrid_t* locksgrid_alloc(long width, long height, long depth) {
 
     locksgrid_t* lgrid = malloc(sizeof(locksgrid_t));
@@ -11,9 +15,9 @@ locksgrid_t* locksgrid_alloc(long width, long height, long depth) {
         lgrid->width = width;
         lgrid->height = height;
         lgrid->depth = depth;
-        lgrid->dimension = width * height * depth;
+        lgrid->dimension = (long long) width * height * depth;
         pthread_mutex_t* locks = malloc(sizeof(pthread_mutex_t) * lgrid->dimension);
-        assert(locks);
+        assert(locks != NULL);
         for (long long i = 0; i < lgrid->dimension; i++) {
             assert(pthread_mutex_init(&locks[i], NULL) == 0);
         }
@@ -23,6 +27,11 @@ locksgrid_t* locksgrid_alloc(long width, long height, long depth) {
     return lgrid;
 }
 
+
+/* =============================================================================
+ * locksgrid_free
+ * =============================================================================
+ */
 void locksgrid_free(locksgrid_t* lgrid) {
     for (long long i = 0; i < lgrid->dimension; i++) {
         pthread_mutex_destroy(&lgrid->locks[i]);
@@ -31,6 +40,11 @@ void locksgrid_free(locksgrid_t* lgrid) {
     free(lgrid);
 }
 
+
+/* =============================================================================
+ * locksgrid_getLock
+ * =============================================================================
+ */
 pthread_mutex_t* locksgrid_getLock(locksgrid_t* lgrid, long i) {
     return &(lgrid->locks[i]);
 }

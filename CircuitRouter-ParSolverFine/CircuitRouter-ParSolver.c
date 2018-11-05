@@ -84,6 +84,7 @@ bool_t global_doPrint = TRUE;
 char* global_inputFile = NULL;
 long global_params[256]; /* 256 = ascii limit */
 
+//TODO decidir onde isto fica
 pthread_mutex_t pathsqueue_mutex;
 pthread_mutex_t pathlist_mutex;
 locksgrid_t* lgrid;
@@ -228,10 +229,16 @@ int main(int argc, char** argv){
     long gridHeight = mazePtr->gridPtr->height; 
     long gridDepth = mazePtr->gridPtr->depth; 
     lgrid = locksgrid_alloc(gridWidth, gridHeight, gridDepth);
+    if (lgrid == NULL) {
+        fprintf(stderr, "Error generating mutexes grid.\n");
+        exit(1);
+    }
+
+    //TODO check errors
     pthread_mutex_init(&pathsqueue_mutex, NULL);
     pthread_mutex_init(&pathlist_mutex, NULL);
 
-    router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr};
+    router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr, lgrid};
     pthread_t tids[PARAM_NUMTHREADS];
     
     TIMER_T startTime;

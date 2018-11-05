@@ -141,7 +141,6 @@ long grid_getPointIndex (grid_t* gridPtr, long* gridPointPtr){
      * Since we're subtracting pointers it does the conversion automatically,
      * taking care of the size of each element.
      */
-    printf("%li\n", gridPointPtr - gridPtr->points);
     return (long) (gridPointPtr - gridPtr->points);
 }
 
@@ -268,8 +267,9 @@ bool_t grid_addPath_Ptr (grid_t* gridPtr, vector_t* pointVectorPtr, locksgrid_t*
         if (gridPointPtr == src || gridPointPtr == dst) {
             continue;
         }
+
         long pointIndex = grid_getPointIndex(gridPtr, gridPointPtr);
-        printf("point = %li / %lli\n", pointIndex, lgrid->dimension);
+        //TODO check errors
         pthread_mutex_lock(locksgrid_getLock(lgrid, pointIndex));
         if (*gridPointPtr == GRID_POINT_FULL) {
             grid_unlockPath(gridPtr, pointVectorPtr, lgrid, i);

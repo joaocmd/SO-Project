@@ -3,7 +3,6 @@
 
 #include <pthread.h>
 
-//TODO comments and cleaning up, maybe allign cache.
 
 typedef struct locksgrid {
     long long dimension;
@@ -13,10 +12,24 @@ typedef struct locksgrid {
     pthread_mutex_t* locks;
 } locksgrid_t;
 
+/* =============================================================================
+ * locksgrid_alloc
+ * =============================================================================
+ */
 locksgrid_t* locksgrid_alloc(long width, long height, long depth);
 
+
+/* =============================================================================
+ * locksgrid_free
+ * =============================================================================
+ */
 void locksgrid_free(locksgrid_t* lgrid);
 
+
+/* =============================================================================
+ * locksgrid_getLock
+ * =============================================================================
+ */
 pthread_mutex_t* locksgrid_getLock(locksgrid_t* lgrid, long i);
 
 #endif
