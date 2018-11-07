@@ -10,8 +10,8 @@ CircuitRouter-SimpleShell: CircuitRouter-SimpleShell.o
 	gcc $(CFLAGS) ../lib/vector.o ../lib/commandlinereader.o finprocess.o  CircuitRouter-SimpleShell.o -o CircuitRouter-SimpleShell -lm
 	touch ../CircuitRouter-SeqSolver/CircuitRouter-SeqSolver.c
 
-CircuitRouter-SeqSolver: CircuitRouter-SeqSolver/CircuitRouter-SeqSolver.c
-	cd CircuitRouter-SeqSolver && $(MAKE)
+CircuitRouter-SeqSolver: ../CircuitRouter-SeqSolver/CircuitRouter-SeqSolver.c
+	cd ../CircuitRouter-SeqSolver && $(MAKE)
 
 CircuitRouter-SimpleShell.o: CircuitRouter-SimpleShell.c finprocess.o ../lib/vector.o ../lib/types.h ../lib/commandlinereader.o
 	gcc $(CFLAGS) -c CircuitRouter-SimpleShell.c  -o CircuitRouter-SimpleShell.o
