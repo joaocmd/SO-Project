@@ -56,7 +56,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-#include <pthread.h>
 #include "locksgrid.h"
 #include "mutexutils.h"
 #include "coordinate.h"

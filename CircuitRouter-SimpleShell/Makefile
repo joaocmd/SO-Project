@@ -27,5 +27,4 @@ finprocess.o: finprocess.c finprocess.h
 
 clean:
 	@echo Cleaning...
-	cd ../CircuitRouter-SeqSolver && $(MAKE) clean 
 	rm -f CircuitRouter-SimpleShell.o finprocess.o ../lib/commandlinereader.o ../lib/vector.o CircuitRouter-SimpleShell

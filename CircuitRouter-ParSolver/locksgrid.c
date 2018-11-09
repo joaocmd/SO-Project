@@ -20,7 +20,7 @@ locksgrid_t* locksgrid_create(long width, long height, long depth) {
         pthread_mutex_t* locks = malloc(sizeof(pthread_mutex_t) * lgrid->dimension);
         assert(locks);
         for (long long i = 0; i < lgrid->dimension; i++) {
-            assert(pthread_mutex_init(&locks[i], NULL) == 0);
+            mutils_init(&locks[i]);
         }
 
         lgrid->locks = locks;

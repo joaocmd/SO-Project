@@ -390,6 +390,11 @@ void* router_solve (void* argPtr){
 
     grid_free(myGridPtr);
     queue_free(myExpansionQueuePtr);
+    /*
+     * This return NULL results in an implicit call to pthread_exit(NULL) according to the pthread_exit man page.
+     * Writing pthread_exit(NULL) explicitly was resulting in memory "leaks" (still reachable) because the pthread_exit
+     * function doesn't clean the memory allocated in the stack by the function.
+     */
     return NULL;
 }
 

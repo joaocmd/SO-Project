@@ -1,11 +1,13 @@
 Diretorias do Projeto:
-CircuitRouter-SimpleShell corresponde à shell realizada na primeira entrega de projeto. (Não avaliado para esta estrega).
+CircuitRouter-SimpleShell corresponde à shell realizada na primeira entrega de projeto. (Não relevante para esta estrega).
 CircuitRouter-SeqSolver corresponde à versão sequencial.
 CircuitRouter-ParSolver corresponde à versão paralelizada, com granularidade fina.
+As pastas lib e inputs não foram mudadas de sitio.
+A pasta results tem os ficheiros gerados pelo doTest.sh.
 
-O script doTest.sh faz o que foi pedido no enunciado, e o testAll.sh corre o doTest.sh para todos os ficheiros de input que acabem em .txt (tendo alterado o sufixo random-x512-y512-z7-n512 de .txt para .notest para evitar testar).
+O script doTest.sh faz o que foi pedido no enunciado, e o testAll.sh corre o doTest.sh para todos os ficheiros em inputs/ que acabem em .txt (tendo alterado o sufixo random-x512-y512-z7-n512 de .txt para .notest para evitar testar).
 
-Output de lscpu (menos repetitivo do que cat /proc/cpuinfo e tem a informação necessária):
+Output de lscpu (mais sucinto que o /proc/cpuinfo e tem a informação necessária):
 Architecture:        x86_64
 CPU op-mode(s):      32-bit, 64-bit
 Byte Order:          Little Endian
