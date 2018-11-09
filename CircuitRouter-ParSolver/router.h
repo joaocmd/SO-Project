@@ -45,67 +45,66 @@
  *
  * =============================================================================
  *
- * coordinate.h
+ * router.h
  *
  * =============================================================================
  */
 
 
-#ifndef COORDINATE_H
-#define COORDINATE_H 1
+#ifndef ROUTER_H
+#define ROUTER_H 1
 
 
-#include "lib/types.h"
+#include <pthread.h>
+#include "locksgrid.h"
+#include "grid.h"
+#include "maze.h"
+#include "lib/vector.h"
 
-typedef struct coordinate {
-    long x;
-    long y;
-    long z;
-} coordinate_t;
+typedef struct router {
+    long xCost;
+    long yCost;
+    long zCost;
+    long bendCost;
+} router_t;
 
-
-/* =============================================================================
- * coordinate_alloc
- * =============================================================================
- */
-coordinate_t* coordinate_alloc (long x, long y, long z);
-
-
-/* =============================================================================
- * coordinate_free
- * =============================================================================
- */
-void coordinate_free (coordinate_t* coordinatePtr);
-
-
-/* =============================================================================
- * coordinate_isEqual
- * =============================================================================
- */
-bool_t coordinate_isEqual (coordinate_t* aPtr, coordinate_t* bPtr);
+typedef struct router_solve_arg {
+    router_t* routerPtr;
+    maze_t* mazePtr;
+    list_t* pathVectorListPtr;
+    locksgrid_t* lgrid;
+    pthread_mutex_t* queue_mutex;
+    pthread_mutex_t* list_mutex;
+} router_solve_arg_t;
 
 
 /* =============================================================================
- * coordinate_comparePair
- * -- For sorting in list of source/destination pairs
+ * router_alloc
  * =============================================================================
  */
-long coordinate_comparePair (const void* aPtr, const void* bPtr);
+router_t* router_alloc (long xCost, long yCost, long zCost, long bendCost);
 
 
 /* =============================================================================
- * coordinate_areAdjacent
+ * router_free
  * =============================================================================
  */
-bool_t coordinate_areAdjacent (coordinate_t* aPtr, coordinate_t* bPtr);
+void router_free (router_t* routerPtr);
 
 
-#endif /* COORDINATE_H */
+/* =============================================================================
+ * router_solve
+ * =============================================================================
+ */
+void* router_solve (void* argPtr);
+
+
+#endif /* ROUTER_H */
 
 
 /* =============================================================================
  *
- * End of coordinate.h
+ * End of router.h
  *
  * =============================================================================
  */

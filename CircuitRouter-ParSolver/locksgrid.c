@@ -2,12 +2,13 @@
 #include <pthread.h>
 #include <assert.h>
 #include "locksgrid.h"
+#include "mutexutils.h"
 
 /* =============================================================================
  * locksgrid_alloc
  * =============================================================================
  */
-locksgrid_t* locksgrid_alloc(long width, long height, long depth) {
+locksgrid_t* locksgrid_create(long width, long height, long depth) {
 
     locksgrid_t* lgrid = malloc(sizeof(locksgrid_t));
 
@@ -17,7 +18,7 @@ locksgrid_t* locksgrid_alloc(long width, long height, long depth) {
         lgrid->depth = depth;
         lgrid->dimension = (long long) width * height * depth;
         pthread_mutex_t* locks = malloc(sizeof(pthread_mutex_t) * lgrid->dimension);
-        assert(locks != NULL);
+        assert(locks);
         for (long long i = 0; i < lgrid->dimension; i++) {
             assert(pthread_mutex_init(&locks[i], NULL) == 0);
         }
@@ -34,7 +35,7 @@ locksgrid_t* locksgrid_alloc(long width, long height, long depth) {
  */
 void locksgrid_free(locksgrid_t* lgrid) {
     for (long long i = 0; i < lgrid->dimension; i++) {
-        pthread_mutex_destroy(&lgrid->locks[i]);
+        mutils_destroy(&lgrid->locks[i]);
     }
     free(lgrid->locks);
     free(lgrid);

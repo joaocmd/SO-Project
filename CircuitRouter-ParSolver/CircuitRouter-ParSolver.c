@@ -61,6 +61,8 @@
 #include "lib/list.h"
 #include "maze.h"
 #include "router.h"
+#include "locksgrid.h"
+#include "mutexutils.h"
 #include "lib/timer.h"
 #include "lib/types.h"
 
@@ -219,12 +221,30 @@ int main(int argc, char** argv){
     list_t* pathVectorListPtr = list_alloc(NULL);
     assert(pathVectorListPtr);
 
-    router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr};
+    
+    //Initialize grid locks.
+    long gridWidth = mazePtr->gridPtr->width;
+    long gridHeight = mazePtr->gridPtr->height; 
+    long gridDepth = mazePtr->gridPtr->depth; 
+    locksgrid_t* lgrid = locksgrid_create(gridWidth, gridHeight, gridDepth);
+    if (lgrid == NULL) {
+        fprintf(stderr, "Error generating mutexes grid.\n");
+        exit(1);
+    }
+
+    //Initialize "global" mutexes.
+    pthread_mutex_t pathsqueue_mutex;
+    pthread_mutex_t pathlist_mutex;
+    mutils_init(&pathsqueue_mutex);
+    mutils_init(&pathlist_mutex);
+
+    router_solve_arg_t routerArg = {routerPtr, mazePtr, pathVectorListPtr, lgrid,
+                                    &pathsqueue_mutex, &pathlist_mutex};
     pthread_t tids[PARAM_NUMTHREADS];
     
     TIMER_T startTime;
     TIMER_READ(startTime);
-
+    
     for (int i = 0; i < global_params[PARAM_NUMTHREADS]; i++) {
         if (pthread_create(&tids[i], NULL, router_solve, (void*) &routerArg)) {
             fprintf(stderr, "Error creating thread\n");
@@ -233,13 +253,17 @@ int main(int argc, char** argv){
     }
     for (int i = 0; i < global_params[PARAM_NUMTHREADS]; i++) {
         if (pthread_join(tids[i], NULL)) {
-            fprintf(stderr, "Error joinning threads\n");
+            fprintf(stderr, "Error joining threads\n");
             exit(1);
         }
     }
 
     TIMER_T stopTime;
     TIMER_READ(stopTime);
+
+    locksgrid_free(lgrid);
+    mutils_destroy(&pathsqueue_mutex);
+    mutils_destroy(&pathlist_mutex);
 
     long numPathRouted = 0;
     list_iter_t it;

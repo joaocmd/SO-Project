@@ -55,6 +55,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include "locksgrid.h"
+#include "mutexutils.h"
 #include "coordinate.h"
 #include "grid.h"
 #include "lib/queue.h"
@@ -289,9 +290,6 @@ static vector_t* doTraceback (grid_t* gridPtr, grid_t* myGridPtr, coordinate_t* 
     return pointVectorPtr;
 }
 
-//TODO inicializar isto noutro sitio
-static pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t list_mutex = PTHREAD_MUTEX_INITIALIZER;
 /* =============================================================================
  * router_solve
  * =============================================================================
@@ -302,6 +300,8 @@ void* router_solve (void* argPtr){
     router_t* routerPtr = routerArgPtr->routerPtr;
     maze_t* mazePtr = routerArgPtr->mazePtr;
     locksgrid_t* lgrid = routerArgPtr->lgrid;
+    pthread_mutex_t* queue_mutex = routerArgPtr->queue_mutex;
+    pthread_mutex_t* list_mutex = routerArgPtr->list_mutex;
     vector_t* myPathVectorPtr = vector_alloc(1);
     assert(myPathVectorPtr);
 
@@ -326,13 +326,13 @@ void* router_solve (void* argPtr){
         /*
          * Lock queue, pop path to compute and unlock.
          */
-        pthread_mutex_lock(&queue_mutex);
+        mutils_lock(queue_mutex);
         if (queue_isEmpty(workQueuePtr)) {
             coordinatePairPtr = NULL;
         } else {
             coordinatePairPtr = (pair_t*)queue_pop(workQueuePtr);
         }
-        pthread_mutex_unlock(&queue_mutex);
+        mutils_unlock(queue_mutex);
         
         if (coordinatePairPtr == NULL) {
             break;
@@ -378,20 +378,19 @@ void* router_solve (void* argPtr){
             bool_t status = vector_pushBack(myPathVectorPtr,(void*)pointVectorPtr);
             assert(status);
         }
-
     }
 
     /*
      * Add my paths to global list
      */
     list_t* pathVectorListPtr = routerArgPtr->pathVectorListPtr;
-    pthread_mutex_lock(&list_mutex);
+    mutils_lock(list_mutex);
     list_insert(pathVectorListPtr, (void*)myPathVectorPtr);
-    pthread_mutex_unlock(&list_mutex);
+    mutils_unlock(list_mutex);
 
     grid_free(myGridPtr);
     queue_free(myExpansionQueuePtr);
-    pthread_exit(NULL);
+    return NULL;
 }
 
 

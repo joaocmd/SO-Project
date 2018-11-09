@@ -1,3 +1,0 @@
-em vez de ordenar tentar trylock
-se falhar esperamos pelo outro um numero random (random(0, 1) * 0.000001)
-isto continua com deadlocks acho eu

@@ -16,7 +16,7 @@ typedef struct locksgrid {
  * locksgrid_alloc
  * =============================================================================
  */
-locksgrid_t* locksgrid_alloc(long width, long height, long depth);
+locksgrid_t* locksgrid_create(long width, long height, long depth);
 
 
 /* =============================================================================
