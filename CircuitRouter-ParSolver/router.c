@@ -352,12 +352,11 @@ void* router_solve (void* argPtr){
             pointVectorPtr = NULL;
 
             /*
-             * There's no need to lock the grid while coping it, because
+             * There's no need to lock the grid while copying it, because
              * all the filled blocks that are currently in the grid will
              * be final, since we're verifying if the path is valid before adding.
-             * And so, if we copy a path that is only halfway to being written to
-             * the grid, the expansion will start avoiding it already as if it were
-             * an obstacle (which it is).
+             * We're also sure we can copy a "safe" grid because the cache is
+             * alligned and we can atomically read and write each point.
              */
             grid_copy(myGridPtr, gridPtr);/* create a copy of the grid, over which the expansion and trace back phases will be executed. */ 
             if (doExpansion(routerPtr, myGridPtr, myExpansionQueuePtr,
@@ -390,12 +389,7 @@ void* router_solve (void* argPtr){
 
     grid_free(myGridPtr);
     queue_free(myExpansionQueuePtr);
-    /*
-     * This return NULL results in an implicit call to pthread_exit(NULL) according to the pthread_exit man page.
-     * Writing pthread_exit(NULL) explicitly was resulting in memory "leaks" (still reachable) because the pthread_exit
-     * function doesn't clean the memory allocated in the stack by the function.
-     */
-    return NULL;
+    pthread_exit(NULL);
 }
 
 

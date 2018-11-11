@@ -139,7 +139,7 @@ bool_t grid_isPointValid (grid_t* gridPtr, long x, long y, long z){
 long grid_getPointIndex (grid_t* gridPtr, long* gridPointPtr){
     /*
      * Since we're subtracting pointers it does the conversion automatically,
-     * taking care of the size of each element.
+     * Taking in account the size of each element.
      */
     return (long) (gridPointPtr - gridPtr->points);
 }

@@ -1,5 +1,7 @@
+Para compilar o projeto basta usar o comando "make" na diretoria principal (Isto força a compição, mesmo que já esteja compilado).
+Para limpar pode-se usar make clean.
+
 Diretorias do Projeto:
-CircuitRouter-SimpleShell corresponde à shell realizada na primeira entrega de projeto. (Não relevante para esta estrega).
 CircuitRouter-SeqSolver corresponde à versão sequencial.
 CircuitRouter-ParSolver corresponde à versão paralelizada, com granularidade fina.
 As pastas lib e inputs não foram mudadas de sitio.
