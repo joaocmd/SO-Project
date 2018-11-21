@@ -1,4 +1,4 @@
-#ifndef MUITILS_H
+#ifndef MUTILS_H
 #define MUTILS_H
 
 #include <pthread.h>
