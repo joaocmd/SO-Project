@@ -10,6 +10,8 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <string.h>
 #include "commandlinereader.h"
@@ -18,15 +20,15 @@
 #include "finprocess.h"
 
 unsigned int MAXCHILDREN = UINT_MAX;
-#define CH_APPNAME "CircuitRouter"
-#define CH_APPPATH "CircuitRouter-SeqSolver/CircuitRouter-SeqSolver"
+#define CH_APPNAME "CircuitRouter-SeqSolver"
+#define CH_APPPATH "../CircuitRouter-SeqSolver/CircuitRouter-SeqSolver"
 #define FORKVECINITSIZE 4
 #define ARGVECTORSIZE 4
 #define BUFFERSIZE 256
 
 /*
  * displayUsage
-*/
+ */
 void displayUsage(const char* appName) {
     printf("Usage: %s <optional argument>\n", appName);
     printf("Optional Argument:                                (default)\n");
@@ -38,7 +40,7 @@ void displayUsage(const char* appName) {
 
 /*
  * parseArgs
-*/
+ */
 void parseArgs(int argc, char** argv) {
     if (argc > 2) {
         displayUsage(argv[0]);
@@ -56,7 +58,7 @@ void parseArgs(int argc, char** argv) {
 
 /*
  * command: returns whether the command matches the first argument in argVector.
-*/
+ */
 int command(const char* command, char** argVector) {
     return strcmp(argVector[0], command) == 0;
 }
@@ -64,7 +66,7 @@ int command(const char* command, char** argVector) {
 /*
  * freeForks: frees the allocated memory for the finished processes vector.
  * Prints the pid and exit status of child processes if printProcesses is true.
-*/
+ */
 void freeForks(vector_t *forks, bool_t printProcesses) {
     process *proc;
     for (int i = 0; i < vector_getSize(forks); i++) {
@@ -81,7 +83,7 @@ void freeForks(vector_t *forks, bool_t printProcesses) {
 /*
  * waitAndSave: waits for a process to finish. Creates a finished process 
  * and pushes it to the forks vector.
-*/
+ */
 void waitAndSave(vector_t *forks, int *nChildren) {
     pid_t pid;
     int status;
@@ -113,10 +115,25 @@ int main(int argc, char** argv) {
     int nChildren = 0;
     vector_t *forks = vector_alloc(FORKVECINITSIZE);
 
+    // Create and open server pipe
+    char serverPipe[64];//TODO constante
+    int fserv;
+    sprintf(serverPipe, "%s.pipe", argv[0]);
+    unlink(serverPipe);
+    if (mkfifo(serverPipe, 0666) < 0) {
+        fprintf(stderr, "AdvShell: Couldn't create server pipe");
+    }
+    if ((fserv = open(serverPipe, O_RDONLY)) < 0) {
+        fprintf(stderr, "AdvShell: Couldn't open server pipe");
+    }
+
     while (1) {
         int nArgs = readLineArguments(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
+        if (nArgs == -1) {
+            fprintf(stderr, "Error occured reading command, terminating.\n");
+            exit(1);
+        }
         // Ignore empty prompts
-        if (nArgs == -1) break;
         if (nArgs == 0) continue;
         if (command("run", argVector)) {
             if (nArgs != 2) {
@@ -149,6 +166,7 @@ int main(int argc, char** argv) {
                 waitAndSave(forks, &nChildren);
             }
             freeForks(forks, TRUE);  
+            unlink(serverPipe);
             break;
         } else {
             fprintf(stderr, "Invalid command %s\n", argVector[0]);
