@@ -235,11 +235,11 @@ int main(int argc, char** argv){
     assert(numPathRouted <= numPathToRoute);
     bool_t status = maze_checkPaths(mazePtr, pathVectorListPtr, global_doPrint, outputFP);
     assert(status == TRUE);
-    char* verPassedMsg = "Verification passed.\n";
-    fprintf(outputFP, verPassedMsg);
-    write(1, verPassedMsg, strlen(verPassedMsg) + 1);
+    fprintf(outputFP, "Verification passed.\n");
 
     fclose(outputFP);
+    char* verPassedMsg = "Path sucessfully computed.\n";
+    write(1, verPassedMsg, strlen(verPassedMsg) + 1);
 
     maze_free(mazePtr);
     router_free(routerPtr);

@@ -13,6 +13,7 @@
 #include "chprocess.h"
 #include "advshellprotocol.h"
 #include "timer.h"
+#include "types.h"
 
 
 /*
@@ -20,8 +21,9 @@
  * returns it's pointer.
  */
 process* process_alloc(pid_t pid) {
-    process *p = malloc(sizeof(process*));
+    process *p = malloc(sizeof(struct chprocess));
     p->pid = pid;
+    p->done = FALSE;
     return p;
 }
 
@@ -39,6 +41,14 @@ void process_free(process* p) {
  */
 pid_t process_getpid(process* p) {
     return p->pid;
+}
+
+
+/*
+ * process_isdone: returns whether the process is done or not.
+ */
+bool_t process_isdone(process* p) {
+    return p->done;
 }
 
 
@@ -75,6 +85,7 @@ void process_start(process* p) {
  */
 void process_end(process* p) {
     TIMER_READ(p->end);
+    p->done = TRUE;
 }
 
 
@@ -84,7 +95,5 @@ void process_end(process* p) {
 void process_print(process* p) {
     char* status = (p->status == OK)? "OK" : "NOK";
     float time = TIMER_DIFF_SECONDS(p->start, p->end);
-    printf("Start: %ld\n", p->start.tv_sec);
-    printf("End: %ld\n", p->end.tv_sec);
     printf("CHILD EXITED (PID=%i; return %s; %.0f s)\n", p->pid, status, time);
 }

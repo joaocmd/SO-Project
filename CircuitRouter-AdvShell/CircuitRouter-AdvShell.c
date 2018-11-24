@@ -85,15 +85,19 @@ void printProcesses() {
         proc = vector_at(forks, i);
         process_print(proc);
     }
+    printf("END\n");
 }
 
 
 /*
- * findProcess: returns the pointer to a child process allocated in the forks vector.
+ * findGoingProcess: returns the pointer to a child process
+ * that has not yet completed (because they might have same PID if created
+ * at different times) allocated in the forks vector.
  */
-process* findProcess(pid_t pid) {
+process* findGoingProcess(pid_t pid) {
     for (int i = 0; i < vector_getSize(forks); i++) {
-        if (process_getpid(vector_at(forks, i)) == pid) {
+        process* p = vector_at(forks, i);
+        if (process_getpid(p) == pid && !process_isdone(p)) {
             return vector_at(forks, i);
         }
     }
@@ -150,7 +154,7 @@ void invalidCommand(int fd) {
  * is registered in the forks vector, so that when a SIGCHLD is received we're sure
  * that it will be there.
  */
-void usr1handler(int s) {
+void sigusr1handler(int s) {
     forkGreenlight = TRUE;
 }
 
@@ -162,7 +166,6 @@ void usr1handler(int s) {
 void sigchldhandler(int s) {
     pid_t pid;
     int status;
-    signal(SIGCHLD, &sigchldhandler);
     pid = waitpid(-1, &status, WNOHANG);
     if (pid < 0) {
         if (errno == EINTR) {
@@ -175,14 +178,13 @@ void sigchldhandler(int s) {
         cleanExit(EXIT_FAILURE);
     } else if (pid != 0) {
         // We're already sure the process is there, so no need to check return value
-        process* proc = findProcess(pid);
+        process* proc = findGoingProcess(pid);
         /*if (proc == NULL) {
             char *findErrorMsg = "Error finding child process.\n";
             write(2, "Error finding child process.\n", strlen(findErrorMsg) + 1);
         }*/
-        process_setstatus(proc, status); 
         process_end(proc);
-        printf("End: %ld\n", proc->end.tv_sec);
+        process_setstatus(proc, status); 
         currForks--;
     }
 }
@@ -191,7 +193,7 @@ void sigchldhandler(int s) {
 /*
  * runCommand: Treats the run command.
  */
-void runCommand(int fd, char* fdName, char** argVector, int nArgs) {
+void runCommand(int fd, char** argVector, int nArgs) {
     if (nArgs != 2) {
         char* msg = "Run must (only) receive input file name.\n";
         write(fd, msg, strlen(msg) + 1);
@@ -202,7 +204,6 @@ void runCommand(int fd, char* fdName, char** argVector, int nArgs) {
         pause();
     }
 
-    signal(SIGUSR1, &usr1handler);
     pid_t pid = fork(); 
     if (pid == -1) {
         fprintf(stderr, "Error creating child process.\n");
@@ -216,7 +217,7 @@ void runCommand(int fd, char* fdName, char** argVector, int nArgs) {
         }
 
         //TODO EINTR
-        if (pid == 1) {
+        if (fd != 1) {
             dup2(fd, 1);
             dup2(fd, 2);
         }
@@ -240,12 +241,11 @@ void runCommand(int fd, char* fdName, char** argVector, int nArgs) {
  * exitCommand: Treats the exit command.
  */
 void exitCommand() {
-    fprintf(stdout, "Exiting shell...\n");
+    fprintf(stdout, "Terminating\n");
     while (currForks > 0) {
         pause();
     }
     printProcesses();
-    printf("END\n");
     //unlink(serverPipe);
     cleanExit(EXIT_SUCCESS);
 }
@@ -279,7 +279,7 @@ void treatClient(char* buffer) {
         return;
     } else {
         if (command("run", argVector)) {
-            runCommand(fcli, clientPipe, argVector, nArgs);            
+            runCommand(fcli, argVector, nArgs);            
         } else {
             invalidCommand(fcli);
         }
@@ -295,8 +295,6 @@ void treatInput(char* buffer) {
     char* argVector[ARGVECTORSIZE];
     int nArgs = parseCommand(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
 
-    printProcesses();
-
     if (nArgs == -1) {
         fprintf(stderr, "Error occured reading command, terminating.\n");
         exit(EXIT_FAILURE);
@@ -305,7 +303,7 @@ void treatInput(char* buffer) {
     // Ignore empty prompts
     if (nArgs == 0) return;
     if (command("run", argVector)) {
-        runCommand(1, NULL, argVector, nArgs);            
+        runCommand(1, argVector, nArgs);            
     } else if (command("exit", argVector)) {
         exitCommand();
     } else {
@@ -317,7 +315,20 @@ void treatInput(char* buffer) {
 
 int main(int argc, char** argv) {
     parseArgs(argc, argv);
+    
     signal(SIGCHLD, &sigchldhandler);
+    signal(SIGUSR1, &sigusr1handler);
+
+    /*
+    struct sigaction usr1act;
+    memset(&usr1act, 0, sizeof(usr1act));
+    usr1act.sa_handler = &sigusr1handler;
+    sigaction(SIGUSR1, &usr1act, NULL);
+    
+    struct sigaction chldact;
+    memset(&chldact, 0, sizeof(chldact));
+    usr1act.sa_handler = &sigchldhandler;
+    sigaction(SIGCHLD, &chldact, NULL);*/
 
     // Child processes variables
     forks = vector_alloc(FORKVECINITSIZE);

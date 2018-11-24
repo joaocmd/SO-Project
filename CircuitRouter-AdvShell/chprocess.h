@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include "advshellprotocol.h"
 #include "timer.h"
+#include "types.h"
 
 typedef enum {OK, NOK} pstatus_t;
 
@@ -20,6 +21,7 @@ typedef struct chprocess process;
 struct chprocess {
     pid_t pid;
     pstatus_t status;
+    bool_t done;
     TIMER_T start;
     TIMER_T end;
 };
@@ -42,6 +44,11 @@ void process_free(process* p);
  * process_getpid: returns the PID of the child process.
  */
 pid_t process_getpid(process* p);
+
+/*
+ * process_isdone: returns whether the process is done or not.
+ */
+bool_t process_isdone(process* p);
 
 
 /*
