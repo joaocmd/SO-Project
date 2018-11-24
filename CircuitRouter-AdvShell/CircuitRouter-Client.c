@@ -53,6 +53,9 @@ int command(const char* command, char** argVector) {
 int main(int argc, char** argv) {
     parseArgs(argc, argv);
 
+    // Reader buffer
+    char buffer[BUFFERSIZE];
+
     char* serverPipe = argv[1];
     int fserv;
     // Open server pipe
@@ -63,36 +66,58 @@ int main(int argc, char** argv) {
 
     char clientPipe[MAXPIPELEN]; 
     int fcli;
-    // Create client pipe
+    // Create and open client pipe
     snprintf(clientPipe, MAXPIPELEN, "/tmp/advclient%i.pipe", getpid());
     unlink(clientPipe);
     if (mkfifo(clientPipe, 0666) < 0) {
         fprintf(stderr, "Client: couldn't create client pipe.\n");
         exit(EXIT_FAILURE);
     }
-    if ((fcli = open(clientPipe, O_RDONLY | O_NONBLOCK) < 0)) {
+    if ((fcli = open(clientPipe, O_RDONLY | O_NONBLOCK)) < 0) {
         fprintf(stderr, "Client: couldn't open client pipe.\n");
         exit(EXIT_FAILURE);
     }
 
-    char buffer[BUFFERSIZE];
-    bool_t ready = FALSE;
-    while (1) {
-        char* line = fgets(buffer, BUFFERSIZE, stdin);
-        if (line == NULL) {
-            fprintf(stderr, "%s\n", buffer);
-            fprintf(stderr, "Error reading input, terminating.\n");
-            exit(EXIT_FAILURE);
-        }
-       
-        // Send any command to the advanced shell.
-        char msg[BUFFERSIZE];
-        snprintf(msg, BUFFERSIZE, "%s%c%s", clientPipe, CLIMSGDELIM, buffer);
-        write(fserv, msg, strlen(msg) + 1);
+    fd_set cmask;
+    FD_ZERO(&cmask);
+    FD_SET(0, &cmask);
+    FD_SET(fcli, &cmask);
 
-        int bread = read(fcli, msg, BUFFERSIZE);
-        msg[bread] = '\0';
-        printf("%i\n%s", bread, msg);
+    while (1) {
+        fd_set tmask = cmask;
+
+        int fready = select(fcli+1, &tmask, NULL, NULL, NULL);
+        if (fready == -1) {
+            fprintf(stderr, "Client: Error waiting for communication.\n");
+            exit(1);
+        }
+        printf("%i fds ready\n", fready);
+
+        // Got input from stdin
+        if (FD_ISSET(0, &tmask)) {
+            puts("Stdin fd ready");
+            char* line = fgets(buffer, BUFFERSIZE, stdin);
+            if (line == NULL) {
+                fprintf(stderr, "%s\n", buffer);
+                fprintf(stderr, "Error reading input, terminating.\n");
+                exit(EXIT_FAILURE);
+            }
+       
+            // Send any command to the advanced shell.
+            char msg[BUFFERSIZE];
+            snprintf(msg, BUFFERSIZE, "%s%c%s", clientPipe, CLIMSGDELIM, buffer);
+            write(fserv, msg, strlen(msg) + 1);
+        }
+        
+        // Got a response from a process
+        if (FD_ISSET(fcli, &tmask)) {
+            char msg[BUFFERSIZE];
+            int bread = read(fcli, msg, BUFFERSIZE);
+            msg[bread] = '\0';
+            printf("%i\n%s", bread, msg);
+        }
+
+        sleep(1);
     }
 
     exit(EXIT_SUCCESS);
