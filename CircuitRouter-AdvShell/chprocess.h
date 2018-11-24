@@ -19,40 +19,58 @@ typedef enum {OK, NOK} pstatus_t;
 typedef struct chprocess process;
 struct chprocess {
     pid_t pid;
-    char pipe[MAXPIPELEN];
     pstatus_t status;
     TIMER_T start;
     TIMER_T end;
 };
 
+
 /*
  * process_alloc: allocs memory and initializes a child process struct, 
  * returns it's pointer.
  */
-process* process_alloc(pid_t pid, char* pipe);
+process* process_alloc(pid_t pid);
+
 
 /*
  * process_free: frees the allocated memory for a child process.
  */
 void process_free(process* p);
 
-/*
- * p_getpid: returns the PID of the child process.
- */
-pid_t p_getpid(process* p);
 
 /*
- * p_getstatus: returns the exit status of the child process.
+ * process_getpid: returns the PID of the child process.
  */
-int p_getstatus(process* p);
+pid_t process_getpid(process* p);
+
 
 /*
- * p_start: registers the starting time for the process.
+ * process_getstatus: returns the exit status of the child process.
  */
-void p_start(process* p);
+int process_getstatus(process* p);
+
 
 /*
- * p_end: registers the ending time for the process.
+ * process_setstatus: sets the exit status of the child process.
  */
- void p_end(process* p);
+void process_setstatus(process* p, int status);
+
+
+/*
+ * process_start: registers the starting time for the process.
+ */
+void process_start(process* p);
+
+
+/*
+ * process_end: registers the ending time for the process.
+ */
+ void process_end(process* p);
+
+
+/*
+ * process_print: prints a process, appends newline.
+ */
+void process_print(process* p);
+
 #endif

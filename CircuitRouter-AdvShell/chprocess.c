@@ -4,7 +4,9 @@
 * Gonçalo Almeida, 89448
 */
 
+
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <string.h>
@@ -12,17 +14,15 @@
 #include "advshellprotocol.h"
 #include "timer.h"
 
+#define PRINTBUFFSIZE
 
 /*
  * process_alloc: allocs memory and initializes a child process struct, 
  * returns it's pointer.
  */
-process* process_alloc(pid_t pid, char* pipe) {
+process* process_alloc(pid_t pid) {
     process *p = malloc(sizeof(process*));
     p->pid = pid;
-    if(pipe != NULL) {
-        strncpy(p->pipe, pipe, MAXPIPELEN);
-    }
     return p;
 }
 
@@ -36,31 +36,51 @@ void process_free(process* p) {
 
 
 /*
- * p_getpid: returns the PID of the child process.
+ * process_getpid: returns the PID of the child process.
  */
-pid_t p_getpid(process* p) {
+pid_t process_getpid(process* p) {
     return p->pid;
 }
 
 
 /*
- * p_getstatus: returns the exit status of the child process.
+ * process_getstatus: returns the exit status of the child process.
  */
-int p_getstatus(process* p) {
+int process_getstatus(process* p) {
     return p->status;
 }
 
 
 /*
- * p_start: registers the starting time for the process.
+ * process_setstatus: sets the exit status of the child process.
  */
-void p_start(process* p) {
+void process_setstatus(process* p, int status) {
+    pstatus_t s = OK;
+    if (WIFEXITED(status) == 0 || WEXITSTATUS(status != 0)) {
+        s = NOK;
+    }
+    p->status = s;
+}
+/*
+ * process_start: registers the starting time for the process.
+ */
+void process_start(process* p) {
     TIMER_READ(p->start);
 }
 
 /*
- * p_end: registers the ending time for the process.
+ * process_end: registers the ending time for the process.
  */
- void p_end(process* p) {
+void process_end(process* p) {
     TIMER_READ(p->end);
- }
+}
+
+
+/*
+ * process_print: prints a process, appends newline.
+ */
+void process_print(process* p) {
+    char* status = p->status == OK? "OK" : "NOK";
+    int time = TIMER_DIFF_SECONDS(p->start, p->end);
+    printf("CHILD EXITED (PID=%i; return %s; %i s)\n", p->pid, status, time);
+}

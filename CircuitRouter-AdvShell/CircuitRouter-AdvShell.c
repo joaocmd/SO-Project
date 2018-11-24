@@ -30,6 +30,7 @@ unsigned int MAXCHILDREN = UINT_MAX;
 #define ARGVECTORSIZE 4
 #define BUFFERSIZE 256
 
+
 bool_t forkGreenlight = FALSE;
 int totalForks = 0;
 int currForks = 0;
@@ -85,8 +86,7 @@ void freeForks(vector_t *forks, bool_t printProcesses) {
     for (int i = 0; i < vector_getSize(forks); i++) {
         proc = vector_at(forks, i);
         if (printProcesses) {
-            printf("CHILD EXITED (PID=%i; return %s)\n", p_getpid(proc), 
-                    p_getstatus(proc) == OK ? "OK" : "NOK");
+            process_print(proc);
         }
         process_free(proc);
     }
@@ -95,30 +95,15 @@ void freeForks(vector_t *forks, bool_t printProcesses) {
 
 
 /*
- * waitAndSave: waits for a process to finish. Creates a finished process 
- * and pushes it to the forks vector.
+ * findProcess: returns the pointer to a child process allocated in the forks vector.
  */
-void waitAndSave(vector_t *forks, int *nChildren) {
-    pid_t pid;
-    int status;
-    pstatus_t pstatus = OK;
-    pid = wait(&status);
-    if (pid < 0) {
-        if (errno == EINTR) {
-            // Wait again because the wait was interrupted by signal.
-            waitAndSave(forks, nChildren);
-            return;
-        } 
-        fprintf(stderr, "Error waiting for child process.\n"); 
-        freeForks(forks, FALSE);
-        exit(EXIT_FAILURE);
+process* findProcess(pid_t pid) {
+    for (int i = 0; i < totalForks; i++) {
+        if (process_getpid(vector_at(forks, i)) == pid) {
+            return vector_at(forks, i);
+        }
     }
-    if (WIFEXITED(status) == 0 || WEXITSTATUS(status) != 0) {
-        pstatus = NOK;
-    }
-    process *proc = process_alloc(pid, "TODO");
-    vector_pushBack(forks, proc);
-    (*nChildren)--;
+    return NULL;
 }
 
 
@@ -140,6 +125,7 @@ int createServerPipe(char* name) {
     return fd;
 }
 
+
 /*
  * invalidCommand: Treats an invalid command.
  */
@@ -148,13 +134,49 @@ void invalidCommand(int fd) {
     write(fd, msg, strlen(msg) + 1);
 }
 
+
 /*
  * usr1handler: This signal (USR1) is used to tell the children when they can start.
+ * By using this signal, we make sure that the child process only starts its entry
+ * is registered in the forks vector, so that when a SIGCHLD is received we're sure
+ * that it will be there.
  */
 void usr1handler(int s) {
-    //puts("let's go");
     forkGreenlight = TRUE;
 }
+
+
+/*
+ * sigchldhandler: This signal is used to detect when a child process has probably
+ * finished.
+ */
+void sigchldhandler(int s) {
+    pid_t pid;
+    int status;
+    pid = waitpid(-1, &status, WNOHANG);
+    if (pid < 0) {
+        if (errno == EINTR) {
+            // Wait again because the wait was interrupted by signal.
+            sigchldhandler(s);
+            return;
+        } 
+        char* waitErrorMsg = "Error waiting for child process.\n";
+        write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
+        freeForks(forks, FALSE);
+        exit(EXIT_FAILURE);
+    } else if (pid != 0) {
+        // We're already sure the process is there, so no need to check return value
+        process* proc = findProcess(pid);
+        /*if (proc == NULL) {
+            char *findErrorMsg = "Error finding child process.\n";
+            write(2, "Error finding child process.\n", strlen(findErrorMsg) + 1);
+        }*/
+        process_setstatus(proc, status); 
+        process_end(proc);
+        currForks--;
+    }
+}
+
 
 /*
  * runCommand: Treats the run command.
@@ -184,14 +206,20 @@ void runCommand(int fd, char* fdName, char** argVector, int nArgs) {
         while (!forkGreenlight) {
             pause();
         }
+
+        //TODO EINTR
+        if (pid == 1) {
+            dup2(fd, 1);
+            dup2(fd, 2);
+        }
         execl(CH_APPPATH, CH_APPNAME, argVector[1], NULL);
         // Only runs if execl failed
         freeForks(forks, FALSE); 
         exit(EXIT_FAILURE);
     } else {
-        process* proc = process_alloc(pid, fdName); 
+        process* proc = process_alloc(pid); 
         vector_pushBack(forks, proc);
-        p_start(proc);
+        process_start(proc);
         kill(pid, SIGUSR1);
         totalForks++;
         currForks++;
@@ -275,6 +303,7 @@ void treatInput(char* buffer) {
 
 int main(int argc, char** argv) {
     parseArgs(argc, argv);
+    signal(SIGCHLD, &sigchldhandler);
 
     // Child processes variables
     forks = vector_alloc(FORKVECINITSIZE);
@@ -317,7 +346,6 @@ int main(int argc, char** argv) {
                 continue;
             }
             buffer[bread] = '\0';
-            printf("%s", buffer);
             treatClient(buffer);
         }
     }

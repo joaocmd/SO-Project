@@ -64,6 +64,7 @@
 #include "lib/types.h"
 
 enum param_types {
+    PARAM_PIPE     = (unsigned char)'p',
     PARAM_BENDCOST = (unsigned char)'b',
     PARAM_XCOST    = (unsigned char)'x',
     PARAM_YCOST    = (unsigned char)'y',
@@ -71,6 +72,7 @@ enum param_types {
 };
 
 enum param_defaults {
+    PARAM_DEFAULT_PIPE     = 1,
     PARAM_DEFAULT_BENDCOST = 1,
     PARAM_DEFAULT_XCOST    = 1,
     PARAM_DEFAULT_YCOST    = 1,
@@ -89,6 +91,8 @@ long global_params[256]; /* 256 = ascii limit */
 static void displayUsage (const char* appName){
     printf("Usage: %s <inputfile> [options]\n", appName);
     puts("\nOptions:                            (defaults)\n");
+    printf("    p <INT>    [p]ipe fd            (%i)\n", PARAM_DEFAULT_BENDCOST);
+    printf("        -note: If [p] is invalid, output will be sent to stdout.\n");
     printf("    b <INT>    [b]end cost          (%i)\n", PARAM_DEFAULT_BENDCOST);
     printf("    x <UINT>   [x] movement cost    (%i)\n", PARAM_DEFAULT_XCOST);
     printf("    y <UINT>   [y] movement cost    (%i)\n", PARAM_DEFAULT_YCOST);
@@ -103,6 +107,7 @@ static void displayUsage (const char* appName){
  * =============================================================================
  */
 static void setDefaultParams (){
+    global_params[PARAM_PIPE]     = PARAM_DEFAULT_PIPE;
     global_params[PARAM_BENDCOST] = PARAM_DEFAULT_BENDCOST;
     global_params[PARAM_XCOST]    = PARAM_DEFAULT_XCOST;
     global_params[PARAM_YCOST]    = PARAM_DEFAULT_YCOST;
@@ -121,8 +126,10 @@ static void parseArgs (long argc, char* const argv[]){
 
     setDefaultParams();
 
-    while ((opt = getopt(argc, argv, "hb:x:y:z:")) != -1) {
+    while ((opt = getopt(argc, argv, "hp:b:x:y:z:")) != -1) {
         switch (opt) {
+            case 'p':
+                global_params[(unsigned char)opt] = atol(optarg); 
             case 'b':
             case 'x':
             case 'y':
@@ -233,7 +240,9 @@ int main(int argc, char** argv){
     assert(numPathRouted <= numPathToRoute);
     bool_t status = maze_checkPaths(mazePtr, pathVectorListPtr, global_doPrint, outputFP);
     assert(status == TRUE);
-    fprintf(outputFP, "Verification passed.\n");
+    char* verPassedMsg = "Verification passed.\n";
+    fprintf(outputFP, verPassedMsg);
+    write(1, verPassedMsg, strlen(verPassedMsg) + 1);
 
     fclose(outputFP);
 

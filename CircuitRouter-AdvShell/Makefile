@@ -2,7 +2,7 @@
 # João David, 89471
 # Gonçalo Almeida, 89448
 
-CFLAGS = -Wall -std=gnu99 -I../lib -g
+CFLAGS = -Wall -std=gnu99 -I../lib
 
 all: CircuitRouter-AdvShell
 
