@@ -2,25 +2,25 @@
 # João David, 89471
 # Gonçalo Almeida, 89448
 
-CFLAGS = -Wall -std=gnu99 -I../lib
+CFLAGS = -Wall -std=gnu99 -I../lib -g
 
 all: CircuitRouter-AdvShell
 
 CircuitRouter-AdvShell: CircuitRouter-AdvShell.o
-	gcc $(CFLAGS) ../lib/vector.o ../lib/commandlinereader.o finprocess.o  CircuitRouter-AdvShell.o -o CircuitRouter-AdvShell -lm
+	gcc $(CFLAGS) ../lib/vector.o commandparser.o chprocess.o  CircuitRouter-AdvShell.o -o CircuitRouter-AdvShell -lm
 
-CircuitRouter-AdvShell.o: CircuitRouter-AdvShell.c finprocess.o ../lib/vector.o ../lib/types.h ../lib/commandlinereader.o
+CircuitRouter-AdvShell.o: CircuitRouter-AdvShell.c chprocess.o ../lib/vector.o ../lib/types.h commandparser.o
 	gcc $(CFLAGS) -c CircuitRouter-AdvShell.c  -o CircuitRouter-AdvShell.o
 
 ../lib/vector.o: ../lib/vector.c ../lib/vector.h
 	gcc $(CFLAGS) -c ../lib/vector.c -o ../lib/vector.o
 
-../lib/commandlinereader.o: ../lib/commandlinereader.c ../lib/commandlinereader.h
-	gcc $(CFLAGS) -c ../lib/commandlinereader.c -o ../lib/commandlinereader.o
+commandparser.o: commandparser.c commandparser.h
+	gcc $(CFLAGS) -c commandparser.c -o commandparser.o
 
-finprocess.o: finprocess.c finprocess.h
-	gcc $(CFLAGS) -c finprocess.c -o finprocess.o
+chprocess.o: chprocess.c chprocess.h
+	gcc $(CFLAGS) -c chprocess.c -o chprocess.o
 
 clean:
 	@echo Cleaning...
-	rm -f CircuitRouter-AdvShell.o finprocess.o ../lib/commandlinereader.o ../lib/vector.o CircuitRouter-AdvShell
+	rm -f CircuitRouter-AdvShell.o chprocess.o commandparser.o ../lib/vector.o CircuitRouter-AdvShell
