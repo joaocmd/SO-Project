@@ -94,7 +94,7 @@ static void displayUsage (const char* appName){
     printf("    y <UINT>   [y] movement cost    (%i)\n", PARAM_DEFAULT_YCOST);
     printf("    z <UINT>   [z] movement cost    (%i)\n", PARAM_DEFAULT_ZCOST);
     printf("    h          [h]elp message       (false)\n");
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 
@@ -166,7 +166,7 @@ FILE *generateOutputFile() {
         sprintf(oldOutputFile, "%s.old", outputFile);
         if (rename(outputFile, oldOutputFile) == -1) {
             perror("Error renaming output file.");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
     FILE *outputFP = fopen(outputFile, "w");
@@ -188,12 +188,12 @@ int main(int argc, char** argv){
     FILE *inputFP = fopen(global_inputFile, "r");
     if (inputFP == NULL) {
         fprintf(stderr, "Invalid input file: %s.\n", global_inputFile);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     FILE *outputFP = generateOutputFile();
     if (outputFP == NULL) {
         fprintf(stderr, "Error creating output file.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     long numPathToRoute = maze_read(mazePtr, inputFP, outputFP);
@@ -253,7 +253,7 @@ int main(int argc, char** argv){
     list_free(pathVectorListPtr);
 
 
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 
 

@@ -138,7 +138,7 @@ static void addToGrid (grid_t* gridPtr, vector_t* vectorPtr, char* type){
         {
             fprintf(stderr, "Error: %s (%li, %li, %li) invalid\n",
                     type, coordinatePtr->x, coordinatePtr->y, coordinatePtr->z);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
     grid_addPath(gridPtr, vectorPtr);
@@ -226,7 +226,7 @@ long maze_read (maze_t* mazePtr, FILE* inputFP, FILE* outputFP){
             default: { /* error */
                 fprintf(stderr, "Error: line %li invalid\n",
                         lineNumber);
-                exit(1);
+                exit(EXIT_FAILURE);
             }
         }
         
@@ -238,7 +238,7 @@ long maze_read (maze_t* mazePtr, FILE* inputFP, FILE* outputFP){
     if (width < 1 || height < 1 || depth < 1) {
         fprintf(stderr, "Error: Invalid dimensions (%li, %li, %li)\n",
                 width, height, depth);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     grid_t* gridPtr = grid_alloc(width, height, depth);
     assert(gridPtr);

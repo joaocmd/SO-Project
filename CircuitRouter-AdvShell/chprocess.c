@@ -20,7 +20,9 @@
 process* process_alloc(pid_t pid, char* pipe) {
     process *p = malloc(sizeof(process*));
     p->pid = pid;
-    strncpy(p->pipe, pipe, MAXPIPELEN);
+    if(pipe != NULL) {
+        strncpy(p->pipe, pipe, MAXPIPELEN);
+    }
     return p;
 }
 

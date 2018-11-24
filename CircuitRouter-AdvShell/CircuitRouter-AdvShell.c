@@ -55,14 +55,14 @@ void displayUsage(const char* appName) {
 void parseArgs(int argc, char** argv) {
     if (argc > 2) {
         displayUsage(argv[0]);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (argc == 2) {
         MAXCHILDREN = strtoul(argv[1], NULL, 10);    
         if (MAXCHILDREN == 0) {
             fprintf(stderr, "Invalid MAXCHILDREN.\n");
             displayUsage(argv[0]);
-            exit(1);
+            exit(EXIT_FAILURE);
         }
     }
 }
@@ -111,7 +111,7 @@ void waitAndSave(vector_t *forks, int *nChildren) {
         } 
         fprintf(stderr, "Error waiting for child process.\n"); 
         freeForks(forks, FALSE);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     if (WIFEXITED(status) == 0 || WEXITSTATUS(status) != 0) {
         pstatus = NOK;
@@ -144,14 +144,15 @@ int createServerPipe(char* name) {
  * invalidCommand: Treats an invalid command.
  */
 void invalidCommand(int fd) {
-    char* msg = "Invalid command.\n"; 
+    char* msg = "Command not supported.\n"; 
     write(fd, msg, strlen(msg) + 1);
 }
 
 /*
- * usr1signal: This signal (USR1) is used to tell the children when they can start.
+ * usr1handler: This signal (USR1) is used to tell the children when they can start.
  */
-void usr1signal(int s) {
+void usr1handler(int s) {
+    //puts("let's go");
     forkGreenlight = TRUE;
 }
 
@@ -170,23 +171,23 @@ void runCommand(int fd, char* fdName, char** argVector, int nArgs) {
         pause();
         //waitAndSave(forks, &nChildren);//TODO
     }
+
+    signal(SIGUSR1, &usr1handler);
     pid_t pid = fork(); 
     if (pid == -1) {
         fprintf(stderr, "Error creating child process.\n");
-        //freeForks(forks, FALSE);  
-        exit(1);
+        freeForks(forks, FALSE);  
+        exit(EXIT_FAILURE);
     }
     if (pid == 0) {
-        signal(SIGUSR1, &usr1signal);
         // Wait for parent to give green light signal.
         while (!forkGreenlight) {
             pause();
         }
-        puts("GOOOO");
         execl(CH_APPPATH, CH_APPNAME, argVector[1], NULL);
         // Only runs if execl failed
-        // freeForks(forks, FALSE); 
-        exit(1);
+        freeForks(forks, FALSE); 
+        exit(EXIT_FAILURE);
     } else {
         process* proc = process_alloc(pid, fdName); 
         vector_pushBack(forks, proc);
@@ -216,22 +217,28 @@ void treatClient(char* buffer) {
     int nArgs = parseCommand(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
     if (nArgs == -1) {
         fprintf(stderr, "Error occured reading command, terminating.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
     
-    // Ignore empty prompts
+    if ((fcli = open(clientPipe, O_WRONLY)) < 0) {
+        fprintf(stderr, "AdvShell: Error opening client pipe\n");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Ignore empty prompts, we send a \0 to the client because
+     * it is waiting for a response.
+     */
     if (nArgs == 0) {
-        printf("Skipping empty line\n");
+        write(fcli, "\0", 1);
         return;
     } else {
-        fcli = open(clientPipe, O_WRONLY);
         if (command("run", argVector)) {
             runCommand(fcli, clientPipe, argVector, nArgs);            
         } else {
             invalidCommand(fcli);
         }
-        close(fcli);
     }
+    close(fcli);
 }
 
 
@@ -243,7 +250,7 @@ void treatInput(char* buffer) {
     int nArgs = parseCommand(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
     if (nArgs == -1) {
         fprintf(stderr, "Error occured reading command, terminating.\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     // Ignore empty prompts
@@ -288,24 +295,32 @@ int main(int argc, char** argv) {
     
     while (1) {
         fd_set tmask = smask; 
-        int sready = select(fserv+1, &tmask, NULL, NULL, NULL);
-        if (sready == -1) {
+        int fready = select(fserv+1, &tmask, NULL, NULL, NULL);
+        if (fready == -1) {
             fprintf(stderr, "AdvShell: Error waiting for communication.\n");
+            exit(EXIT_FAILURE);
         }
 
         int bread;
+        // Got input from stdin
         if (FD_ISSET(0, &tmask)) {
             bread = read(0, buffer, BUFFERSIZE);
             buffer[bread] = '\0';
             treatInput(buffer);
         }
+
+        // Got a request from a client
         if (FD_ISSET(fserv, &tmask)) {
             bread = read(fserv, buffer, BUFFERSIZE);
-            //buffer[bread] = '\0';
+            buffer[bread] = '\0';
+            // If the connection is close read returns 0 bytes read
+            if (bread == 0) {
+                continue;
+            }
             printf("%s", buffer);
             treatClient(buffer);
         }
     }
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
 

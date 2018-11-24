@@ -73,52 +73,32 @@ int main(int argc, char** argv) {
         fprintf(stderr, "Client: couldn't create client pipe.\n");
         exit(EXIT_FAILURE);
     }
-    if ((fcli = open(clientPipe, O_RDONLY | O_NONBLOCK)) < 0) {
-        fprintf(stderr, "Client: couldn't open client pipe.\n");
-        exit(EXIT_FAILURE);
-    }
-
-    fd_set cmask;
-    FD_ZERO(&cmask);
-    FD_SET(0, &cmask);
-    FD_SET(fcli, &cmask);
 
     while (1) {
-        fd_set tmask = cmask;
-
-        int fready = select(fcli+1, &tmask, NULL, NULL, NULL);
-        if (fready == -1) {
-            fprintf(stderr, "Client: Error waiting for communication.\n");
-            exit(1);
+        char msg[BUFFERSIZE];
+        char* line = fgets(buffer, BUFFERSIZE, stdin);
+        if (line == NULL) {
+            fprintf(stderr, "%s\n", buffer);
+            fprintf(stderr, "Error reading input, terminating.\n");
+            exit(EXIT_FAILURE);
         }
-        printf("%i fds ready\n", fready);
-
-        // Got input from stdin
-        if (FD_ISSET(0, &tmask)) {
-            puts("Stdin fd ready");
-            char* line = fgets(buffer, BUFFERSIZE, stdin);
-            if (line == NULL) {
-                fprintf(stderr, "%s\n", buffer);
-                fprintf(stderr, "Error reading input, terminating.\n");
-                exit(EXIT_FAILURE);
-            }
-       
-            // Send any command to the advanced shell.
-            char msg[BUFFERSIZE];
-            snprintf(msg, BUFFERSIZE, "%s%c%s", clientPipe, CLIMSGDELIM, buffer);
-            write(fserv, msg, strlen(msg) + 1);
-        }
+   
+        // Send any command to the advanced shell
+        snprintf(msg, BUFFERSIZE, "%s%c%s", clientPipe, CLIMSGDELIM, buffer);
+        write(fserv, msg, strlen(msg) + 1);
         
-        // Got a response from a process
-        if (FD_ISSET(fcli, &tmask)) {
-            char msg[BUFFERSIZE];
-            int bread = read(fcli, msg, BUFFERSIZE);
-            msg[bread] = '\0';
-            printf("%i\n%s", bread, msg);
+        if ((fcli = open(clientPipe, O_RDONLY)) < 0) {
+            fprintf(stderr, "Client: couldn't open client pipe.\n");
+            exit(EXIT_FAILURE);
         }
 
-        sleep(1);
+        // Wait for response and output it
+        int bread = read(fcli, msg, BUFFERSIZE);
+        close(fcli);
+        msg[bread] = '\0';
+        write(0, msg, strlen(msg) + 1);
     }
 
     exit(EXIT_SUCCESS);
 }
+
