@@ -32,7 +32,6 @@ unsigned int MAXCHILDREN = UINT_MAX;
 
 
 bool_t forkGreenlight = FALSE;
-int totalForks = 0;
 int currForks = 0;
 vector_t* forks;
 
@@ -78,19 +77,14 @@ int command(const char* command, char** argVector) {
 
 
 /*
- * freeForks: frees the allocated memory for the finished processes vector.
- * Prints the pid and exit status of child processes if printProcesses is true.
+ * printProcesses: Prints all processes in the forks vector.
  */
-void freeForks(vector_t *forks, bool_t printProcesses) {
+void printProcesses() {
     process *proc;
     for (int i = 0; i < vector_getSize(forks); i++) {
         proc = vector_at(forks, i);
-        if (printProcesses) {
-            process_print(proc);
-        }
-        process_free(proc);
+        process_print(proc);
     }
-    vector_free(forks);
 }
 
 
@@ -98,12 +92,27 @@ void freeForks(vector_t *forks, bool_t printProcesses) {
  * findProcess: returns the pointer to a child process allocated in the forks vector.
  */
 process* findProcess(pid_t pid) {
-    for (int i = 0; i < totalForks; i++) {
+    for (int i = 0; i < vector_getSize(forks); i++) {
         if (process_getpid(vector_at(forks, i)) == pid) {
             return vector_at(forks, i);
         }
     }
     return NULL;
+}
+
+
+/*
+ * cleanExit: Cleans allocated memory and exits
+ */
+void cleanExit(int status) {
+    // Free processes
+    process *proc;
+    for (int i = 0; i < vector_getSize(forks); i++) {
+        proc = vector_at(forks, i);
+        process_free(proc);
+    }
+    vector_free(forks);
+    exit(status);
 }
 
 
@@ -153,6 +162,7 @@ void usr1handler(int s) {
 void sigchldhandler(int s) {
     pid_t pid;
     int status;
+    signal(SIGCHLD, &sigchldhandler);
     pid = waitpid(-1, &status, WNOHANG);
     if (pid < 0) {
         if (errno == EINTR) {
@@ -162,8 +172,7 @@ void sigchldhandler(int s) {
         } 
         char* waitErrorMsg = "Error waiting for child process.\n";
         write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
-        freeForks(forks, FALSE);
-        exit(EXIT_FAILURE);
+        cleanExit(EXIT_FAILURE);
     } else if (pid != 0) {
         // We're already sure the process is there, so no need to check return value
         process* proc = findProcess(pid);
@@ -173,6 +182,7 @@ void sigchldhandler(int s) {
         }*/
         process_setstatus(proc, status); 
         process_end(proc);
+        printf("End: %ld\n", proc->end.tv_sec);
         currForks--;
     }
 }
@@ -188,20 +198,18 @@ void runCommand(int fd, char* fdName, char** argVector, int nArgs) {
         return;
     }
 
-    // Should only run once (nCurrentChildren == MAXCHILDREN)
     while (currForks >= MAXCHILDREN) {
         pause();
-        //waitAndSave(forks, &nChildren);//TODO
     }
 
     signal(SIGUSR1, &usr1handler);
     pid_t pid = fork(); 
     if (pid == -1) {
         fprintf(stderr, "Error creating child process.\n");
-        freeForks(forks, FALSE);  
-        exit(EXIT_FAILURE);
+        cleanExit(EXIT_FAILURE);
     }
     if (pid == 0) {
+        //TODO pause();
         // Wait for parent to give green light signal.
         while (!forkGreenlight) {
             pause();
@@ -214,14 +222,15 @@ void runCommand(int fd, char* fdName, char** argVector, int nArgs) {
         }
         execl(CH_APPPATH, CH_APPNAME, argVector[1], NULL);
         // Only runs if execl failed
-        freeForks(forks, FALSE); 
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Error executing %s.\n", CH_APPNAME);
+        cleanExit(EXIT_FAILURE);
     } else {
+        //TODO kill(pid, SIGSTOP);
         process* proc = process_alloc(pid); 
         vector_pushBack(forks, proc);
         process_start(proc);
+        //kill(pid, SIGCONT);
         kill(pid, SIGUSR1);
-        totalForks++;
         currForks++;
     }
 }
@@ -230,7 +239,16 @@ void runCommand(int fd, char* fdName, char** argVector, int nArgs) {
 /*
  * exitCommand: Treats the exit command.
  */
-void exitCommand() {}
+void exitCommand() {
+    fprintf(stdout, "Exiting shell...\n");
+    while (currForks > 0) {
+        pause();
+    }
+    printProcesses();
+    printf("END\n");
+    //unlink(serverPipe);
+    cleanExit(EXIT_SUCCESS);
+}
 
 
 /*
@@ -276,6 +294,9 @@ void treatClient(char* buffer) {
 void treatInput(char* buffer) {
     char* argVector[ARGVECTORSIZE];
     int nArgs = parseCommand(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
+
+    printProcesses();
+
     if (nArgs == -1) {
         fprintf(stderr, "Error occured reading command, terminating.\n");
         exit(EXIT_FAILURE);
@@ -286,14 +307,7 @@ void treatInput(char* buffer) {
     if (command("run", argVector)) {
         runCommand(1, NULL, argVector, nArgs);            
     } else if (command("exit", argVector)) {
-        fprintf(stdout, "Exiting shell...\n");
-        while (currForks > 0) {
-            pause();
-            //waitAndSave(forks, &nChildren);
-        }
-        //freeForks(forks, TRUE);  
-        //unlink(serverPipe);
-        //break;
+        exitCommand();
     } else {
         invalidCommand(2);
         //displayUsage(argv[0]);
@@ -326,6 +340,7 @@ int main(int argc, char** argv) {
         fd_set tmask = smask; 
         int fready = select(fserv+1, &tmask, NULL, NULL, NULL);
         if (fready == -1) {
+            if (errno == EINTR) continue;
             fprintf(stderr, "AdvShell: Error waiting for communication.\n");
             exit(EXIT_FAILURE);
         }

@@ -64,7 +64,6 @@
 #include "lib/types.h"
 
 enum param_types {
-    PARAM_PIPE     = (unsigned char)'p',
     PARAM_BENDCOST = (unsigned char)'b',
     PARAM_XCOST    = (unsigned char)'x',
     PARAM_YCOST    = (unsigned char)'y',
@@ -72,7 +71,6 @@ enum param_types {
 };
 
 enum param_defaults {
-    PARAM_DEFAULT_PIPE     = 1,
     PARAM_DEFAULT_BENDCOST = 1,
     PARAM_DEFAULT_XCOST    = 1,
     PARAM_DEFAULT_YCOST    = 1,
@@ -107,7 +105,6 @@ static void displayUsage (const char* appName){
  * =============================================================================
  */
 static void setDefaultParams (){
-    global_params[PARAM_PIPE]     = PARAM_DEFAULT_PIPE;
     global_params[PARAM_BENDCOST] = PARAM_DEFAULT_BENDCOST;
     global_params[PARAM_XCOST]    = PARAM_DEFAULT_XCOST;
     global_params[PARAM_YCOST]    = PARAM_DEFAULT_YCOST;
@@ -126,10 +123,8 @@ static void parseArgs (long argc, char* const argv[]){
 
     setDefaultParams();
 
-    while ((opt = getopt(argc, argv, "hp:b:x:y:z:")) != -1) {
+    while ((opt = getopt(argc, argv, "hb:x:y:z:")) != -1) {
         switch (opt) {
-            case 'p':
-                global_params[(unsigned char)opt] = atol(optarg); 
             case 'b':
             case 'x':
             case 'y':

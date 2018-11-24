@@ -14,7 +14,6 @@
 #include "advshellprotocol.h"
 #include "timer.h"
 
-#define PRINTBUFFSIZE
 
 /*
  * process_alloc: allocs memory and initializes a child process struct, 
@@ -56,17 +55,20 @@ int process_getstatus(process* p) {
  */
 void process_setstatus(process* p, int status) {
     pstatus_t s = OK;
-    if (WIFEXITED(status) == 0 || WEXITSTATUS(status != 0)) {
+    if (WIFEXITED(status) == 0 || WEXITSTATUS(status) != 0) {
         s = NOK;
     }
     p->status = s;
 }
+
+
 /*
  * process_start: registers the starting time for the process.
  */
 void process_start(process* p) {
     TIMER_READ(p->start);
 }
+
 
 /*
  * process_end: registers the ending time for the process.
@@ -80,7 +82,9 @@ void process_end(process* p) {
  * process_print: prints a process, appends newline.
  */
 void process_print(process* p) {
-    char* status = p->status == OK? "OK" : "NOK";
-    int time = TIMER_DIFF_SECONDS(p->start, p->end);
-    printf("CHILD EXITED (PID=%i; return %s; %i s)\n", p->pid, status, time);
+    char* status = (p->status == OK)? "OK" : "NOK";
+    float time = TIMER_DIFF_SECONDS(p->start, p->end);
+    printf("Start: %ld\n", p->start.tv_sec);
+    printf("End: %ld\n", p->end.tv_sec);
+    printf("CHILD EXITED (PID=%i; return %s; %.0f s)\n", p->pid, status, time);
 }
