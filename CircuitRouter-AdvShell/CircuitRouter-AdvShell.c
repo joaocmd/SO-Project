@@ -312,11 +312,11 @@ int main(int argc, char** argv) {
         // Got a request from a client
         if (FD_ISSET(fserv, &tmask)) {
             bread = read(fserv, buffer, BUFFERSIZE);
-            buffer[bread] = '\0';
             // If the connection is close read returns 0 bytes read
             if (bread == 0) {
                 continue;
             }
+            buffer[bread] = '\0';
             printf("%s", buffer);
             treatClient(buffer);
         }
