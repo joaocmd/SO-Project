@@ -126,7 +126,7 @@ void cleanExit(int status) {
  */
 int createServerPipe(char* name) {
     int fd;
-    unlink(name);
+    safe_unlink(name);
     if (mkfifo(name, 0666) < 0) {
         fprintf(stderr, "AdvShell: Couldn't create server pipe.\n");
         exit(EXIT_FAILURE);
