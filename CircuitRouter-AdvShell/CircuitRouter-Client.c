@@ -13,10 +13,24 @@
 #include <limits.h>
 #include <string.h>
 #include "lib/types.h"
+#include "lib/safecalls.h"
 #include "shlib/shellprotocol.h"
 
 #define BUFFERSIZE 256
 #define MSGLENGTH (MAXPIPELEN+BUFFERSIZE+1)
+
+
+
+/*
+ * displayWelcome
+ */
+void displayWelcome() {
+    puts("Welcome to the Advanced Shell Client.");
+    puts("This client can send commands to the Advanced Shell.");
+    puts("After sending a request, wait for a response, the shell");
+    puts("will show a '>' when it's ready for input");
+}
+
 
 /*
  * displayUsage
@@ -25,7 +39,7 @@ void displayUsage(const char* appName) {
     printf("Usage: %s PIPEPATH - Sends commands to AdvShell\n", appName);
     printf("    PIPEPATH <directory>  child processes limit   ULONG_MAX\n");
     printf("Shell:\n");
-    printf("    exitclient            exits the client\n");
+    printf("    Only the run <inputfile> command is allowed in the client.\n");
 }
 
 
@@ -52,30 +66,26 @@ int command(const char* command, char** argVector) {
 
 
 int main(int argc, char** argv) {
+    displayWelcome();
     parseArgs(argc, argv);
 
     // Reader buffer
     char buffer[BUFFERSIZE];
 
+    // Open server pipe
     char* serverPipe = argv[1];
     int fserv;
-    // Open server pipe
-    if ((fserv = open(serverPipe, O_WRONLY)) < 0) {
-        fprintf(stderr, "Client: couldn't open AdvShell pipe.\n");
-        exit(EXIT_FAILURE);
-    }
+    fserv = safe_open(serverPipe, O_WRONLY);
 
+    // Create and open client pipe
     char clientPipe[MAXPIPELEN]; 
     int fcli;
-    // Create and open client pipe
     snprintf(clientPipe, MAXPIPELEN, "/tmp/advclient%i.pipe", getpid());
-    unlink(clientPipe);
-    if (mkfifo(clientPipe, 0666) < 0) {
-        fprintf(stderr, "Client: couldn't create client pipe.\n");
-        exit(EXIT_FAILURE);
-    }
+    safe_unlink(clientPipe);
+    safe_mkfifo(clientPipe, 0666);
 
     while (1) {
+        printf("> ");
         char* line = fgets(buffer, BUFFERSIZE, stdin);
         if (line == NULL) {
             fprintf(stderr, "%s\n", buffer);
@@ -88,14 +98,10 @@ int main(int argc, char** argv) {
         snprintf(msg, MSGLENGTH, "%s%c%s", clientPipe, CLIMSGDELIM, buffer);
         write(fserv, msg, strlen(msg) + 1);
         
-        if ((fcli = open(clientPipe, O_RDONLY)) < 0) {
-            fprintf(stderr, "Client: couldn't open client pipe.\n");
-            exit(EXIT_FAILURE);
-        }
-
         // Wait for response and output it
+        fcli = safe_open(clientPipe, O_RDONLY);
         int bread = read(fcli, buffer, BUFFERSIZE);
-        close(fcli);
+        safe_close(fcli);
         buffer[bread] = '\0';
         printf("%s", buffer);
     }

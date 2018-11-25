@@ -3,10 +3,11 @@
 
 SSOURCES = CircuitRouter-AdvShell.c
 SSOURCES+= shlib/chprocess.c
-SSOURCES+= ../lib/commandparser.c ../lib/vector.c
+SSOURCES+= ../lib/commandparser.c ../lib/vector.c ../lib/safecalls.c
 SOBJS = $(SSOURCES:%.c=%.o)
 
 CSOURCES = CircuitRouter-Client.c
+CSOURCES+= ../lib/safecalls.c
 COBJS = $(CSOURCES:%.c=%.o)
 
 CC   = gcc
@@ -26,11 +27,12 @@ $(CTARGET): $(COBJS)
 	$(CC) $(CFLAGS) $^ -o $(CTARGET) $(LDFLAGS) 
 
 CircuitRouter-AdvShell.o: CircuitRouter-AdvShell.c shlib/shellprotocol.h shlib/chprocess.c shlib/chprocess.h ../lib/commandparser.c ../lib/commandparser.h ../lib/vector.c ../lib/vector.h ../lib/types.h
+CircuitRouter-Client.o: CircuitRouter-Client.c ../lib/types.h shlib/shellprotocol.h
 shlib/chprocess.o: shlib/chprocess.c shlib/chprocess.h shlib/shellprotocol.h ../lib/timer.h ../lib/types.h
 ../lib/vector.o: ../lib/vector.c ../lib/vector.h ../lib/types.h ../lib/utility.h
 ../lib/commandparser.o: ../lib/commandparser.c ../lib/commandparser.h
+../lib/safecalls.o: ../lib/safecalls.c ../lib/safecalls.h
 
-CircuitRouter-Client.o: CircuitRouter-Client.c ../lib/types.h shlib/shellprotocol.h
 
 $(SOBJS):
 	$(CC) $(CFLAGS) -c -o $@ $<

@@ -19,6 +19,7 @@
 #include "lib/vector.h"
 #include "lib/types.h"
 #include "lib/commandparser.h"
+#include "lib/safecalls.h"
 #include "shlib/chprocess.h"
 #include "shlib/shellprotocol.h"
 
@@ -126,15 +127,10 @@ void cleanExit(int status) {
  */
 int createServerPipe(char* name) {
     int fd;
-    unlink(name);
-    if (mkfifo(name, 0666) < 0) {
-        fprintf(stderr, "AdvShell: Couldn't create server pipe.\n");
-        exit(EXIT_FAILURE);
-    }
-    if ((fd = open(name, O_RDONLY | O_NONBLOCK)) < 0) {
-        fprintf(stderr, "AdvShell: Couldn't open server pipe.\n");
-        exit(EXIT_FAILURE);
-    }
+    safe_unlink(name);
+    safe_mkfifo(name, 0666);
+    
+    fd = safe_open(name, O_RDONLY | O_NONBLOCK);
     return fd;
 }
 
@@ -144,7 +140,7 @@ int createServerPipe(char* name) {
  */
 void invalidCommand(int fd) {
     char* msg = "Command not supported.\n"; 
-    write(fd, msg, strlen(msg) + 1);
+    safe_write(fd, msg, strlen(msg) + 1);
 }
 
 
@@ -199,17 +195,18 @@ void sigchldhandler(int s) {
 void runCommand(int fd, char** argVector, int nArgs) {
     if (nArgs != 2) {
         char* msg = "Run must (only) receive input file name.\n";
-        write(fd, msg, strlen(msg) + 1);
+        safe_write(fd, msg, strlen(msg) + 1);
         return;
     }
 
     while (currForks >= MAXCHILDREN) {
+        puts("More forks running than allowed, pausing...");
         pause();
     }
 
     pid_t pid = fork(); 
     if (pid == -1) {
-        fprintf(stderr, "Error creating child process.\n");
+        perror("Error creating child process.\n");
         cleanExit(EXIT_FAILURE);
     }
     if (pid == 0) {
@@ -219,13 +216,13 @@ void runCommand(int fd, char** argVector, int nArgs) {
         }
 
         if (fd != 1) {
-            dup2(fd, 1);
-            dup2(fd, 2);
-            close(fd);
+            safe_dup2(fd, 1);
+            safe_dup2(fd, 2);
+            safe_close(fd);
         }
         execl(CH_APPPATH, CH_APPNAME, argVector[1], NULL);
         // Only runs if execl failed
-        fprintf(stderr, "Error executing %s.\n", CH_APPNAME);
+        perror("Error on exec call.\n");
         cleanExit(EXIT_FAILURE);
     } else {
         process* proc = process_alloc(pid); 
@@ -268,20 +265,17 @@ void treatClient(char* buffer) {
     buffer = readTillChar(clientPipe, CLIMSGDELIM, buffer, BUFFERSIZE);
     int nArgs = parseCommand(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
     if (nArgs == -1) {
-        fprintf(stderr, "Error occured reading command, terminating.\n");
+        perror("Error occured reading command, terminating.\n");
         exit(EXIT_FAILURE);
     }
     
-    if ((fcli = open(clientPipe, O_WRONLY)) < 0) {
-        fprintf(stderr, "AdvShell: Error opening client pipe\n");
-        exit(EXIT_FAILURE);
-    }
 
+    fcli = safe_open(clientPipe, O_WRONLY);
     /* Ignore empty prompts, we send a \0 to the client because
      * it is waiting for a response.
      */
     if (nArgs == 0) {
-        write(fcli, "\0", 1);
+        safe_write(fcli, "\0", 1);
         return;
     } else {
         if (command("run", argVector)) {
@@ -303,7 +297,7 @@ void treatInput(char* buffer) {
     int nArgs = parseCommand(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
 
     if (nArgs == -1) {
-        fprintf(stderr, "Error occured reading command, terminating.\n");
+        perror("Error occured reading command, terminating.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -315,7 +309,6 @@ void treatInput(char* buffer) {
         exitCommand();
     } else {
         invalidCommand(2);
-        //displayUsage(argv[0]);
     }
 }
 
@@ -362,21 +355,21 @@ int main(int argc, char** argv) {
             if (errno == EINTR) {
                 continue;
             }
-            fprintf(stderr, "AdvShell: Error waiting for communication.\n");
+            perror("AdvShell: Error waiting for communication.\n");
             exit(EXIT_FAILURE);
         }
 
         int bread;
         // Got input from stdin
         if (FD_ISSET(0, &tmask)) {
-            bread = read(0, buffer, BUFFERSIZE);
+            bread = safe_read(0, buffer, BUFFERSIZE);
             buffer[bread] = '\0';
             treatInput(buffer);
         }
 
         // Got a request from a client
         if (FD_ISSET(fserv, &tmask)) {
-            bread = read(fserv, buffer, BUFFERSIZE);
+            bread = safe_read(fserv, buffer, BUFFERSIZE);
             // If the connection is close read returns 0 bytes read
             if (bread == 0) {
                 continue;
