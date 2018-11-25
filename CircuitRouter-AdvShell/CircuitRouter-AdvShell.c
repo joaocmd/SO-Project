@@ -194,21 +194,6 @@ void sigchldhandler(int s) {
 
 
 /*
- * redirectFd: Duplicates file descriptor to redirect newfd into oldfd.
- */
-void redirectFd(int oldfd, int newfd) {
-    if ((dup2(oldfd, newfd)) < 0) {
-        if (errno == EINTR) {
-            redirectFd(oldfd, newfd);
-        } else {
-            fprintf(stderr, "Error redirecting file descriptor.\n");
-            exit(EXIT_FAILURE);
-        }
-    }
-}
-
-
-/*
  * runCommand: Treats the run command.
  */
 void runCommand(int fd, char** argVector, int nArgs) {
@@ -234,8 +219,8 @@ void runCommand(int fd, char** argVector, int nArgs) {
         }
 
         if (fd != 1) {
-            redirectFd(fd, 1);
-            redirectFd(fd, 2);
+            dup2(fd, 1);
+            dup2(fd, 2);
             close(fd);
         }
         execl(CH_APPPATH, CH_APPNAME, argVector[1], NULL);
