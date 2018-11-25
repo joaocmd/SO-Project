@@ -16,6 +16,7 @@
 #include "shlib/shellprotocol.h"
 
 #define BUFFERSIZE 256
+#define MSGLENGTH (MAXPIPELEN+BUFFERSIZE+1)
 
 /*
  * displayUsage
@@ -83,8 +84,8 @@ int main(int argc, char** argv) {
         }
    
         // Send any command to the advanced shell
-        char msg[MAXPIPELEN+1+BUFFERSIZE];
-        snprintf(msg, BUFFERSIZE, "%s%c%s", clientPipe, CLIMSGDELIM, buffer);
+        char msg[MSGLENGTH];
+        snprintf(msg, MSGLENGTH, "%s%c%s", clientPipe, CLIMSGDELIM, buffer);
         write(fserv, msg, strlen(msg) + 1);
         
         if ((fcli = open(clientPipe, O_RDONLY)) < 0) {

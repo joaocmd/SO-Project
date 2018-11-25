@@ -1,19 +1,9 @@
-SEQSOLVER=CircuitRouter-SeqSolver/CircuitRouter-SeqSolver.c
-PARSOLVER=CircuitRouter-ParSolver/CircuitRouter-ParSolver.c
-
-all: forcemake CircuitRouter-SeqSolver CircuitRouter-ParSolver
-
-forcemake:
-	touch $(SEQSOLVER)
-	touch $(PARSOLVER)
-
-CircuitRouter-SeqSolver: $(SEQSOLVER)
-	cd CircuitRouter-SeqSolver && $(MAKE)
-
-CircuitRouter-ParSolver: $(PARSOLVER)
-	cd CircuitRouter-ParSolver && $(MAKE)
+all:
+	(cd CircuitRouter-SeqSolver && make $(MFLAGS) all)
+	(cd CircuitRouter-AdvShell  && make $(MFLAGS) all)
 
 clean:
-	cd CircuitRouter-SeqSolver && make clean
-	cd CircuitRouter-ParSolver && make clean
+	(cd CircuitRouter-SeqSolver && make $(MFLAGS) clean)
+	(cd CircuitRouter-AdvShell  && make $(MFLAGS) clean)
+	(cd inputs && rm *.res*)
     

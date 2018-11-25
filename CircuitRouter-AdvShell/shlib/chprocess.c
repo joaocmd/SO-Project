@@ -22,8 +22,10 @@
  */
 process* process_alloc(pid_t pid) {
     process *p = malloc(sizeof(struct chprocess));
-    p->pid = pid;
-    p->done = FALSE;
+    if (p != NULL) {
+        p->pid = pid;
+        p->done = FALSE;
+    }
     return p;
 }
 

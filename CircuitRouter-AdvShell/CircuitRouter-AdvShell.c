@@ -150,9 +150,11 @@ void invalidCommand(int fd) {
 
 /*
  * usr1handler: This signal (USR1) is used to tell the children when they can start.
- * By using this signal, we make sure that the child process only starts its entry
- * is registered in the forks vector, so that when a SIGCHLD is received we're sure
- * that it will be there.
+ * By using this signal, we make sure that the child process only starts when its 
+ * entry is registered in the forks vector, so that when a SIGCHLD is received we're
+ * sure that it will be there.
+ * Using this instead of SIGSTOP and SIGCONT because if parent gave SIGCONT before
+ * child reaching SIGSTOP it would get stuck waiting for a signal.
  */
 void sigusr1handler(int s) {
     forkGreenlight = TRUE;
@@ -161,31 +163,47 @@ void sigusr1handler(int s) {
 
 /*
  * sigchldhandler: This signal is used to detect when a child process has probably
- * finished.
+ * finished, because signals aren't queued, we have to check for multiple processes
+ * in just one call.
  */
 void sigchldhandler(int s) {
+    int olderrno = errno;
     pid_t pid;
     int status;
-    pid = waitpid(-1, &status, WNOHANG);
-    if (pid < 0) {
-        if (errno == EINTR) {
-            // Wait again because the wait was interrupted by signal.
-            sigchldhandler(s);
-            return;
+    do {
+        pid = waitpid(-1, &status, WNOHANG);
+        if (pid < 0) {
+            if (errno == EINTR) {
+                continue;
+            } else {
+                char* waitErrorMsg = "Error waiting for child process.\n";
+                write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
+                cleanExit(EXIT_FAILURE);
+            }
         } 
-        char* waitErrorMsg = "Error waiting for child process.\n";
-        write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
-        cleanExit(EXIT_FAILURE);
-    } else if (pid != 0) {
-        // We're already sure the process is there, so no need to check return value
-        process* proc = findGoingProcess(pid);
-        /*if (proc == NULL) {
-            char *findErrorMsg = "Error finding child process.\n";
-            write(2, "Error finding child process.\n", strlen(findErrorMsg) + 1);
-        }*/
-        process_end(proc);
-        process_setstatus(proc, status); 
-        currForks--;
+        if (pid > 0) {
+            // We're sure the process is there, so no need to check return value
+            process* proc = findGoingProcess(pid);
+            process_end(proc);
+            process_setstatus(proc, status); 
+            currForks--;
+        }
+    } while (pid != 0);
+    errno = olderrno;
+}
+
+
+/*
+ * redirectFd: Duplicates file descriptor to redirect newfd into oldfd.
+ */
+void redirectFd(int oldfd, int newfd) {
+    if ((dup2(oldfd, newfd)) < 0) {
+        if (errno == EINTR) {
+            redirectFd(oldfd, newfd);
+        } else {
+            fprintf(stderr, "Error redirecting file descriptor.\n");
+            exit(EXIT_FAILURE);
+        }
     }
 }
 
@@ -210,27 +228,28 @@ void runCommand(int fd, char** argVector, int nArgs) {
         cleanExit(EXIT_FAILURE);
     }
     if (pid == 0) {
-        //TODO pause();
         // Wait for parent to give green light signal.
         while (!forkGreenlight) {
             pause();
         }
 
-        //TODO EINTR
         if (fd != 1) {
-            dup2(fd, 1);
-            dup2(fd, 2);
+            redirectFd(fd, 1);
+            redirectFd(fd, 2);
+            close(fd);
         }
         execl(CH_APPPATH, CH_APPNAME, argVector[1], NULL);
         // Only runs if execl failed
         fprintf(stderr, "Error executing %s.\n", CH_APPNAME);
         cleanExit(EXIT_FAILURE);
     } else {
-        //TODO kill(pid, SIGSTOP);
         process* proc = process_alloc(pid); 
+        if (proc == NULL) {
+            fprintf(stderr, "Error allocating object");
+            exit(1);
+        }
         vector_pushBack(forks, proc);
         process_start(proc);
-        //kill(pid, SIGCONT);
         kill(pid, SIGUSR1);
         currForks++;
     }
@@ -245,7 +264,9 @@ void exitCommand() {
         pause();
     }
     printProcesses();
+    //TODO
     //unlink(serverPipe);
+    //close;
     cleanExit(EXIT_SUCCESS);
 }
 
@@ -351,7 +372,9 @@ int main(int argc, char** argv) {
         fd_set tmask = smask; 
         int fready = select(fserv+1, &tmask, NULL, NULL, NULL);
         if (fready == -1) {
-            if (errno == EINTR) continue;
+            if (errno == EINTR) {
+                continue;
+            }
             fprintf(stderr, "AdvShell: Error waiting for communication.\n");
             exit(EXIT_FAILURE);
         }
