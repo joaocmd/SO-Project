@@ -1,5 +1,5 @@
-#ifndef ADVSHELLP_H
-#define ADVSHELLP_H
+#ifndef ADVSHELLPROTOCOL_H
+#define ADVSHELLPROTOCOL_H
 
 #define MAXPIPELEN 64
 #define CLIMSGDELIM '|'

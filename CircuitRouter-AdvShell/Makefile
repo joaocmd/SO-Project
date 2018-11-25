@@ -1,26 +1,49 @@
-# Makefile
-# João David, 89471
-# Gonçalo Almeida, 89448
+# Makefile, versao 1
+# Sistemas Operativos, DEI/IST/ULisboa 2018-19
 
-CFLAGS = -Wall -std=gnu99 -I../lib
+SSOURCES = CircuitRouter-AdvShell.c
+SSOURCES+= shlib/chprocess.c
+SSOURCES+= ../lib/commandparser.c ../lib/vector.c
+SOBJS = $(SSOURCES:%.c=%.o)
 
-all: CircuitRouter-AdvShell
+CSOURCES = CircuitRouter-Client.c
+COBJS = $(CSOURCES:%.c=%.o)
 
-CircuitRouter-AdvShell: CircuitRouter-AdvShell.o
-	gcc $(CFLAGS) ../lib/vector.o commandparser.o chprocess.o  CircuitRouter-AdvShell.o -o CircuitRouter-AdvShell -lm
+CC   = gcc
+CFLAGS =-Wall -std=gnu99 -I../
+LDFLAGS=-lm
+STARGET = CircuitRouter-AdvShell
+CTARGET = CircuitRouter-Client
 
-CircuitRouter-AdvShell.o: CircuitRouter-AdvShell.c chprocess.o ../lib/vector.o ../lib/types.h commandparser.o
-	gcc $(CFLAGS) -c CircuitRouter-AdvShell.c  -o CircuitRouter-AdvShell.o
+all: $(STARGET) $(CTARGET)
 
-../lib/vector.o: ../lib/vector.c ../lib/vector.h
-	gcc $(CFLAGS) -c ../lib/vector.c -o ../lib/vector.o
+$(STARGET): $(SOBJS)
+	@echo target
+	$(CC) $(CFLAGS) $^ -o $(STARGET) $(LDFLAGS) 
 
-commandparser.o: commandparser.c commandparser.h
-	gcc $(CFLAGS) -c commandparser.c -o commandparser.o
+$(CTARGET): $(COBJS)
+	@echo target
+	$(CC) $(CFLAGS) $^ -o $(CTARGET) $(LDFLAGS) 
 
-chprocess.o: chprocess.c chprocess.h
-	gcc $(CFLAGS) -c chprocess.c -o chprocess.o
+CircuitRouter-AdvShell.o: CircuitRouter-AdvShell.c shlib/shellprotocol.h shlib/chprocess.c shlib/chprocess.h ../lib/commandparser.c ../lib/commandparser.h ../lib/vector.c ../lib/vector.h ../lib/types.h
+shlib/chprocess.o: shlib/chprocess.c shlib/chprocess.h shlib/shellprotocol.h ../lib/timer.h ../lib/types.h
+../lib/vector.o: ../lib/vector.c ../lib/vector.h ../lib/types.h ../lib/utility.h
+../lib/commandparser.o: ../lib/commandparser.c ../lib/commandparser.h
 
-clean:
-	@echo Cleaning...
-	rm -f CircuitRouter-AdvShell.o chprocess.o commandparser.o ../lib/vector.o CircuitRouter-AdvShell
+CircuitRouter-Client.o: CircuitRouter-Client.c ../lib/types.h shlib/shellprotocol.h
+
+$(SOBJS):
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+$(COBJS):
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+clean: sclean cclean
+
+sclean:
+	@echo Cleaning shell...
+	rm -f $(SOBJS) $(STARGET)	
+
+cclean:
+	@echo Cleaning client...
+	rm -f $(COBJS) $(CTARGET)

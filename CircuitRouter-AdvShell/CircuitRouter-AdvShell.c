@@ -16,11 +16,11 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <string.h>
-#include "commandparser.h"
-#include "vector.h"
-#include "types.h"
-#include "chprocess.h"
-#include "advshellprotocol.h"
+#include "lib/vector.h"
+#include "lib/types.h"
+#include "lib/commandparser.h"
+#include "shlib/chprocess.h"
+#include "shlib/shellprotocol.h"
 
 
 unsigned int MAXCHILDREN = UINT_MAX;
@@ -241,7 +241,6 @@ void runCommand(int fd, char** argVector, int nArgs) {
  * exitCommand: Treats the exit command.
  */
 void exitCommand() {
-    fprintf(stdout, "Terminating\n");
     while (currForks > 0) {
         pause();
     }
@@ -279,6 +278,7 @@ void treatClient(char* buffer) {
         return;
     } else {
         if (command("run", argVector)) {
+            puts("Client run request received.");
             runCommand(fcli, argVector, nArgs);            
         } else {
             invalidCommand(fcli);

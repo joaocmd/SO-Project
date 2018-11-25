@@ -8,9 +8,9 @@
 #define CHPROCESS_H 1
 
 #include <sys/types.h>
-#include "advshellprotocol.h"
-#include "timer.h"
-#include "types.h"
+#include "shellprotocol.h"
+#include "lib/timer.h"
+#include "lib/types.h"
 
 typedef enum {OK, NOK} pstatus_t;
 

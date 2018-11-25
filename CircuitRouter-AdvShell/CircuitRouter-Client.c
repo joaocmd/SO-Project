@@ -12,8 +12,8 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <string.h>
-#include "../lib/types.h"
-#include "advshellprotocol.h"
+#include "lib/types.h"
+#include "shlib/shellprotocol.h"
 
 #define BUFFERSIZE 256
 
@@ -75,7 +75,6 @@ int main(int argc, char** argv) {
     }
 
     while (1) {
-        char msg[BUFFERSIZE];
         char* line = fgets(buffer, BUFFERSIZE, stdin);
         if (line == NULL) {
             fprintf(stderr, "%s\n", buffer);
@@ -84,6 +83,7 @@ int main(int argc, char** argv) {
         }
    
         // Send any command to the advanced shell
+        char msg[MAXPIPELEN+1+BUFFERSIZE];
         snprintf(msg, BUFFERSIZE, "%s%c%s", clientPipe, CLIMSGDELIM, buffer);
         write(fserv, msg, strlen(msg) + 1);
         
@@ -93,10 +93,10 @@ int main(int argc, char** argv) {
         }
 
         // Wait for response and output it
-        int bread = read(fcli, msg, BUFFERSIZE);
+        int bread = read(fcli, buffer, BUFFERSIZE);
         close(fcli);
-        msg[bread] = '\0';
-        write(0, msg, strlen(msg) + 1);
+        buffer[bread] = '\0';
+        printf("%s", buffer);
     }
 
     exit(EXIT_SUCCESS);

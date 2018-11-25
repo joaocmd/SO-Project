@@ -53,9 +53,12 @@ int parseCommand(char **argVector, int vectorSize, char *buffer, int bufferSize)
   return numTokens;
 }
 
+
 /**
  Copies input to buffer until limit is found. Returns the pointer to the character
  that comes after the limit character.
+ When using this function, the programmer has to make sure that there is at least
+ one character after the limit char.
 */
 char* readTillChar(char* buffer, char limit, char* input, int bufferSize)
 {

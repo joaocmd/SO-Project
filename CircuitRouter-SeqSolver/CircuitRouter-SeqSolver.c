@@ -238,8 +238,7 @@ int main(int argc, char** argv){
     fprintf(outputFP, "Verification passed.\n");
 
     fclose(outputFP);
-    char* verPassedMsg = "Path sucessfully computed.\n";
-    write(1, verPassedMsg, strlen(verPassedMsg) + 1);
+    puts("Path sucessfully computed.");
 
     maze_free(mazePtr);
     router_free(routerPtr);
