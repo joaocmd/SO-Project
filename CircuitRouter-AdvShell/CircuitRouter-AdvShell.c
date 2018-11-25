@@ -127,10 +127,8 @@ void cleanExit(int status) {
 int createServerPipe(char* name) {
     int fd;
     safe_unlink(name);
-    if (mkfifo(name, 0666) < 0) {
-        fprintf(stderr, "AdvShell: Couldn't create server pipe.\n");
-        exit(EXIT_FAILURE);
-    }
+    safe_mkfifo(name, 0666);
+    
     if ((fd = open(name, O_RDONLY | O_NONBLOCK)) < 0) {
         fprintf(stderr, "AdvShell: Couldn't open server pipe.\n");
         exit(EXIT_FAILURE);
@@ -144,7 +142,7 @@ int createServerPipe(char* name) {
  */
 void invalidCommand(int fd) {
     char* msg = "Command not supported.\n"; 
-    write(fd, msg, strlen(msg) + 1);
+    safe_write(fd, msg, strlen(msg) + 1);
 }
 
 
@@ -177,7 +175,7 @@ void sigchldhandler(int s) {
                 continue;
             } else {
                 char* waitErrorMsg = "Error waiting for child process.\n";
-                write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
+                safe_write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
                 cleanExit(EXIT_FAILURE);
             }
         } 
@@ -199,7 +197,7 @@ void sigchldhandler(int s) {
 void runCommand(int fd, char** argVector, int nArgs) {
     if (nArgs != 2) {
         char* msg = "Run must (only) receive input file name.\n";
-        write(fd, msg, strlen(msg) + 1);
+        safe_write(fd, msg, strlen(msg) + 1);
         return;
     }
 
@@ -219,9 +217,9 @@ void runCommand(int fd, char** argVector, int nArgs) {
         }
 
         if (fd != 1) {
-            dup2(fd, 1);
-            dup2(fd, 2);
-            close(fd);
+            safe_dup2(fd, 1);
+            safe_dup2(fd, 2);
+            safe_close(fd);
         }
         execl(CH_APPPATH, CH_APPNAME, argVector[1], NULL);
         // Only runs if execl failed
@@ -271,16 +269,14 @@ void treatClient(char* buffer) {
         exit(EXIT_FAILURE);
     }
     
-    if ((fcli = open(clientPipe, O_WRONLY)) < 0) {
-        fprintf(stderr, "AdvShell: Error opening client pipe\n");
-        exit(EXIT_FAILURE);
-    }
+    safe_open(clientPipe, O_WRONLY);
+
 
     /* Ignore empty prompts, we send a \0 to the client because
      * it is waiting for a response.
      */
     if (nArgs == 0) {
-        write(fcli, "\0", 1);
+        safe_write(fcli, "\0", 1);
         return;
     } else {
         if (command("run", argVector)) {
@@ -367,14 +363,14 @@ int main(int argc, char** argv) {
         int bread;
         // Got input from stdin
         if (FD_ISSET(0, &tmask)) {
-            bread = read(0, buffer, BUFFERSIZE);
+            bread = safe_read(0, buffer, BUFFERSIZE);
             buffer[bread] = '\0';
             treatInput(buffer);
         }
 
         // Got a request from a client
         if (FD_ISSET(fserv, &tmask)) {
-            bread = read(fserv, buffer, BUFFERSIZE);
+            bread = safe_read(fserv, buffer, BUFFERSIZE);
             // If the connection is close read returns 0 bytes read
             if (bread == 0) {
                 continue;
