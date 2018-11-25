@@ -173,13 +173,13 @@ void sigchldhandler(int s) {
     do {
         pid = waitpid(-1, &status, WNOHANG);
         if (pid < 0) {
-            if (errno == EINTR) {
-                continue;
-            } else {
-                char* waitErrorMsg = "Error waiting for child process.\n";
-                write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
-                cleanExit(EXIT_FAILURE);
+            // No need to check for EINTR because of WNOHANG
+            if (errno == ECHILD) {
+                break;
             }
+            char* waitErrorMsg = "Error waiting for child process.\n";
+            write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
+            cleanExit(EXIT_FAILURE);
         } 
         if (pid > 0) {
             // We're sure the process is there, so no need to check return value
@@ -245,13 +245,14 @@ void runCommand(int fd, char** argVector, int nArgs) {
  * exitCommand: Treats the exit command.
  */
 void exitCommand() {
+    puts("Exiting Advanced Shell");
     while (currForks > 0) {
         pause();
     }
     printProcesses();
     //TODO
     //unlink(serverPipe);
-    //close;
+    //close(???);
     cleanExit(EXIT_SUCCESS);
 }
 
@@ -320,6 +321,7 @@ void treatInput(char* buffer) {
 
 
 int main(int argc, char** argv) {
+    puts("Welcome to Advanced Shell");
     parseArgs(argc, argv);
     
     signal(SIGCHLD, &sigchldhandler);
