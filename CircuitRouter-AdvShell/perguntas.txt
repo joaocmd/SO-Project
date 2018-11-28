@@ -3,3 +3,4 @@ espera ativa está na boa?
 convém meter o contador safe?
 Casas decimais?
 Fechar todos os file descriptors ou o SO trata disso?
+usar exit dentro dum signal handler
