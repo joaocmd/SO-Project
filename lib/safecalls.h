@@ -1,6 +1,7 @@
 #ifndef SAFECALLS_H
 #define SAFECALLS_H
 
+#include <signal.h>
 
 /* =============================================================================
  * Safe Calls
@@ -12,6 +13,13 @@
  *  a signal, setting errno no EINTR, if that's the case, the call is repeated.
  * =============================================================================
  */
+
+
+// Default wanted behaviour for initializing a sigaction
+void safe_setsigaction(struct sigaction* act, int signal, void* handler);
+
+
+void safe_sigaction(int signum, const struct sigaction* act, struct sigaction* oldact);
 
 
 void safe_mkfifo(const char *pathname, mode_t mode);

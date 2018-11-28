@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -16,20 +17,10 @@
 #include "lib/safecalls.h"
 #include "shlib/shellprotocol.h"
 
-#define BUFFERSIZE 256
-#define MSGLENGTH (MAXPIPELEN+BUFFERSIZE+1)
 
-
-
-/*
- * displayWelcome
- */
-void displayWelcome() {
-    puts("Welcome to the Advanced Shell Client.");
-    puts("This client can send commands to the Advanced Shell.");
-    puts("After sending a request, wait for a response, the shell");
-    puts("will show a '>' when it's ready for input");
-}
+clientmsg_t buffer;
+int fserv;
+int fcli;
 
 
 /*
@@ -58,54 +49,88 @@ void parseArgs(int argc, char** argv) {
 
 
 /*
- * command: returns whether the command matches the first argument in argVector.
+ * endhandler
  */
-int command(const char* command, char** argVector) {
-    return strcmp(argVector[0], command) == 0;
+void endhandler(int s) {
+    int status;
+    switch (s) {
+        case SIGPIPE:
+        {
+            char* msg = "Broken pipe, server probably not running.\n";
+            write(2, msg, strlen(msg));
+            status = EXIT_FAILURE;
+            break;
+        }
+        case SIGINT:
+        {
+            status = EXIT_SUCCESS;
+            break;
+        }
+    }
+    if (close(fserv) < 0) {
+        char* msg = "Error closing server pipe.";
+        write(2, msg, strlen(msg));
+        status = EXIT_FAILURE;
+    }
+    if (close(fcli) < 0) {
+        // The fd might not be open, just ignore then
+        if (errno != EBADF) {
+            char* msg = "Error closing client pipe.";
+            write(2, msg, strlen(msg));
+            status = EXIT_FAILURE;
+        }
+    }
+    if (unlink(buffer.pipe) < 0) {
+        char* msg = "Error unlinking client pipe.";
+        write(2, msg, strlen(msg));
+        status = EXIT_FAILURE;
+    }
+    exit(status);
 }
 
 
 int main(int argc, char** argv) {
-    displayWelcome();
+    puts("Welcome to the Advanced Shell Client.");
     parseArgs(argc, argv);
 
-    // Reader buffer
-    char buffer[BUFFERSIZE];
+
+    // Set signal handlers
+    struct sigaction pipeact;
+    safe_setsigaction(&pipeact, SIGPIPE, &endhandler);
+
+    struct sigaction intact;
+    safe_setsigaction(&intact, SIGINT, &endhandler);
 
     // Open server pipe
     char* serverPipe = argv[1];
-    int fserv;
     fserv = safe_open(serverPipe, O_WRONLY);
 
     // Create and open client pipe
-    char clientPipe[MAXPIPELEN]; 
-    int fcli;
-    snprintf(clientPipe, MAXPIPELEN, "/tmp/advclient%i.pipe", getpid());
-    safe_unlink(clientPipe);
-    safe_mkfifo(clientPipe, 0666);
+    snprintf(buffer.pipe, MAXPIPELEN, "/tmp/advclient%i.pipe", getpid());
+    safe_unlink(buffer.pipe);
+    safe_mkfifo(buffer.pipe, 0666);
 
     while (1) {
         printf("> ");
-        char* line = fgets(buffer, BUFFERSIZE, stdin);
+        char* line = fgets(buffer.msg, MAXMSGSIZE, stdin);
         if (line == NULL) {
-            fprintf(stderr, "%s\n", buffer);
             fprintf(stderr, "Error reading input, terminating.\n");
             exit(EXIT_FAILURE);
         }
    
         // Send any command to the advanced shell
-        char msg[MSGLENGTH];
-        snprintf(msg, MSGLENGTH, "%s%c%s", clientPipe, CLIMSGDELIM, buffer);
-        write(fserv, msg, strlen(msg) + 1);
+        write(fserv, &buffer, sizeof(buffer));
         
         // Wait for response and output it
-        fcli = safe_open(clientPipe, O_RDONLY);
-        int bread = read(fcli, buffer, BUFFERSIZE);
+        //waitClose(fd);
+        fcli = safe_open(buffer.pipe, O_RDONLY);
+        int bread = read(fcli, buffer.msg, MAXMSGSIZE);
         safe_close(fcli);
-        buffer[bread] = '\0';
-        printf("%s", buffer);
+        buffer.msg[bread] = '\0';
+        printf("%s", buffer.msg);
     }
-
-    exit(EXIT_SUCCESS);
 }
 
+/*void waitClosed(int fd) {
+    while ((int bread = read(fcli, "" , 0)) == 0) {}
+}*/

@@ -29,12 +29,15 @@ unsigned int MAXCHILDREN = UINT_MAX;
 #define CH_APPPATH "../CircuitRouter-SeqSolver/CircuitRouter-SeqSolver"
 #define FORKVECINITSIZE 4
 #define ARGVECTORSIZE 4
-#define BUFFERSIZE 256
+#define BUFFERSIZE MAXMSGSIZE
 
 
 bool_t forkGreenlight = FALSE;
 int currForks = 0;
 vector_t* forks;
+
+
+char serverPipe[MAXPIPELEN];
 
 
 /*
@@ -107,7 +110,8 @@ process* findGoingProcess(pid_t pid) {
 
 
 /*
- * cleanExit: Cleans allocated memory and exits
+ * cleanExit: Cleans allocated memory and exits, doesn't remove the pipe
+ * because this function is also used by child processes.
  */
 void cleanExit(int status) {
     // Free processes
@@ -169,6 +173,7 @@ void sigchldhandler(int s) {
     do {
         pid = waitpid(-1, &status, WNOHANG);
         if (pid < 0) {
+            // TODO pid == 0 ou isto?
             // No need to check for EINTR because of WNOHANG
             if (errno == ECHILD) {
                 break;
@@ -199,9 +204,13 @@ void runCommand(int fd, char** argVector, int nArgs) {
         return;
     }
 
-    while (currForks >= MAXCHILDREN) {
+    if (currForks >= MAXCHILDREN) {
         puts("More forks running than allowed, pausing...");
-        pause();
+    }
+    while (currForks >= MAXCHILDREN) {
+        //TODO active waiting...
+        //alarm??
+        //pause();
     }
 
     pid_t pid = fork(); 
@@ -211,9 +220,10 @@ void runCommand(int fd, char** argVector, int nArgs) {
     }
     if (pid == 0) {
         // Wait for parent to give green light signal.
-        while (!forkGreenlight) {
-            pause();
-        }
+        // Actively waiting because the process could enter
+        // the while loop, receive a signal before pause
+        // and get stuck because there would be no more signals.
+        while (!forkGreenlight); //TODO active waiting 
 
         if (fd != 1) {
             safe_dup2(fd, 1);
@@ -232,7 +242,10 @@ void runCommand(int fd, char** argVector, int nArgs) {
         }
         vector_pushBack(forks, proc);
         process_start(proc);
-        kill(pid, SIGUSR1);
+        if ((kill(pid, SIGUSR1)) < 0) {
+            perror("Error sending signal to child process.\n");
+            exit(EXIT_FAILURE);
+        }
         currForks++;
     }
 }
@@ -244,12 +257,13 @@ void runCommand(int fd, char** argVector, int nArgs) {
 void exitCommand() {
     puts("Exiting Advanced Shell");
     while (currForks > 0) {
-        pause();
+        //TODO active waiting
+        //pause();
     }
     printProcesses();
     //TODO
-    //unlink(serverPipe);
     //close(???);
+    safe_unlink(serverPipe);
     cleanExit(EXIT_SUCCESS);
 }
 
@@ -257,20 +271,18 @@ void exitCommand() {
 /*
  * treatClient: Treats the input coming from a client's buffer.
  */
-void treatClient(char* buffer) {
+void treatClient(clientmsg_t* buffer) {
     char* argVector[ARGVECTORSIZE];
-    char clientPipe[MAXPIPELEN];
     int fcli;
 
-    buffer = readTillChar(clientPipe, CLIMSGDELIM, buffer, BUFFERSIZE);
-    int nArgs = parseCommand(argVector, ARGVECTORSIZE, buffer, BUFFERSIZE);
+    int nArgs = parseCommand(argVector, ARGVECTORSIZE, buffer->msg, MAXMSGSIZE);
     if (nArgs == -1) {
         perror("Error occured reading command, terminating.\n");
         exit(EXIT_FAILURE);
     }
     
 
-    fcli = safe_open(clientPipe, O_WRONLY);
+    fcli = safe_open(buffer->pipe, O_WRONLY);
     /* Ignore empty prompts, we send a \0 to the client because
      * it is waiting for a response.
      */
@@ -285,7 +297,7 @@ void treatClient(char* buffer) {
             invalidCommand(fcli);
         }
     }
-    close(fcli);
+    safe_close(fcli);
 }
 
 
@@ -317,28 +329,21 @@ int main(int argc, char** argv) {
     puts("Welcome to Advanced Shell");
     parseArgs(argc, argv);
     
-    signal(SIGCHLD, &sigchldhandler);
-    signal(SIGUSR1, &sigusr1handler);
-
-    /*
+    // Set signal handlers
     struct sigaction usr1act;
-    memset(&usr1act, 0, sizeof(usr1act));
-    usr1act.sa_handler = &sigusr1handler;
-    sigaction(SIGUSR1, &usr1act, NULL);
+    safe_setsigaction(&usr1act, SIGUSR1, &sigusr1handler);
     
     struct sigaction chldact;
-    memset(&chldact, 0, sizeof(chldact));
-    usr1act.sa_handler = &sigchldhandler;
-    sigaction(SIGCHLD, &chldact, NULL);*/
+    safe_setsigaction(&chldact, SIGCHLD, &sigchldhandler);
 
     // Child processes variables
     forks = vector_alloc(FORKVECINITSIZE);
 
-    // Command reader buffer
+    // Command reader buffers
     char buffer[BUFFERSIZE];
+    clientmsg_t cliBuffer;
 
     // Create and open server pipe
-    char serverPipe[MAXPIPELEN];
     int fserv;
     snprintf(serverPipe, MAXPIPELEN, "/tmp/%s.pipe", argv[0]);
     fserv = createServerPipe(serverPipe);
@@ -369,13 +374,12 @@ int main(int argc, char** argv) {
 
         // Got a request from a client
         if (FD_ISSET(fserv, &tmask)) {
-            bread = safe_read(fserv, buffer, BUFFERSIZE);
+            bread = safe_read(fserv, &cliBuffer, sizeof(cliBuffer));
             // If the connection is close read returns 0 bytes read
             if (bread == 0) {
                 continue;
             }
-            buffer[bread] = '\0';
-            treatClient(buffer);
+            treatClient(&cliBuffer);
         }
     }
     exit(EXIT_SUCCESS);

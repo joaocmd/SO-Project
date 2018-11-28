@@ -5,7 +5,26 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
+#include <signal.h>
+#include <string.h>
 #include "safecalls.h"
+
+
+//Default wanted behaviour for initializing a sigaction
+void safe_setsigaction(struct sigaction* act, int signal, void* handler) {
+    memset(act, 0, sizeof(struct sigaction));
+    act->sa_handler = handler;
+    safe_sigaction(signal, act, NULL);
+}
+
+
+void safe_sigaction(int signum, const struct sigaction* act, struct sigaction* oldact) {
+    if ((sigaction(signum, act, oldact)) < 0) {
+        perror("Exit setting sigaction\n");
+        exit(EXIT_FAILURE);
+    }
+}
+
 
 void safe_mkfifo(const char *pathname, mode_t mode){
     if ((mkfifo(pathname, mode)) < 0) {

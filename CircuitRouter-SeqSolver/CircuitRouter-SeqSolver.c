@@ -237,8 +237,10 @@ int main(int argc, char** argv){
     assert(status == TRUE);
     fprintf(outputFP, "Verification passed.\n");
 
-    fclose(outputFP);
-    puts("Path sucessfully computed.");
+    if ((fclose(outputFP)) < 0) {
+        fprintf(stderr, "Error closing output file, resuming program\n");
+    }
+    puts("Circuit Solved.");
 
     maze_free(mazePtr);
     router_free(routerPtr);
