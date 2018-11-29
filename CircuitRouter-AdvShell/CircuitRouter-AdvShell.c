@@ -163,7 +163,7 @@ void sigchldhandler(int s) {
             if (errno != ECHILD) {
                 char* waitErrorMsg = "Error waiting for child process.\n";
                 write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
-                cleanExit(EXIT_FAILURE);
+                _exit(EXIT_FAILURE);
             }
         } 
         if (pid > 0) {
