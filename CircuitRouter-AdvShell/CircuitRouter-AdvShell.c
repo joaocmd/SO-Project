@@ -32,7 +32,7 @@ unsigned int MAXCHILDREN = UINT_MAX;
 #define BUFFERSIZE MAXMSGSIZE
 
 
-bool_t forkGreenlight = FALSE;
+sigset_t sigchldmask;
 int currForks = 0;
 vector_t* forks;
 
@@ -149,22 +149,9 @@ void invalidCommand(int fd) {
 
 
 /*
- * usr1handler: This signal (USR1) is used to tell the children when they can start.
- * By using this signal, we make sure that the child process only starts when its 
- * entry is registered in the forks vector, so that when a SIGCHLD is received we're
- * sure that it will be there.
- * Using this instead of SIGSTOP and SIGCONT because if parent gave SIGCONT before
- * child reaching SIGSTOP it would get stuck waiting for a signal.
- */
-void sigusr1handler(int s) {
-    forkGreenlight = TRUE;
-}
-
-
-/*
  * sigchldhandler: This signal is used to detect when a child process has probably
- * finished, because signals aren't queued, we have to check for multiple processes
- * in just one call.
+ * finished, because standard signals (such as SIGCHLD) aren't queued, we have to 
+ * check for multiple processes in just one call.
  */
 void sigchldhandler(int s) {
     int olderrno = errno;
@@ -173,14 +160,11 @@ void sigchldhandler(int s) {
     do {
         pid = waitpid(-1, &status, WNOHANG);
         if (pid < 0) {
-            // TODO pid == 0 ou isto?
-            // No need to check for EINTR because of WNOHANG
-            if (errno == ECHILD) {
-                break;
+            if (errno != ECHILD) {
+                char* waitErrorMsg = "Error waiting for child process.\n";
+                write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
+                cleanExit(EXIT_FAILURE);
             }
-            char* waitErrorMsg = "Error waiting for child process.\n";
-            write(2, waitErrorMsg, strlen(waitErrorMsg) + 1); 
-            cleanExit(EXIT_FAILURE);
         } 
         if (pid > 0) {
             // We're sure the process is there, so no need to check return value
@@ -189,7 +173,7 @@ void sigchldhandler(int s) {
             process_setstatus(proc, status); 
             currForks--;
         }
-    } while (pid != 0);
+    } while (pid > 0);
     errno = olderrno;
 }
 
@@ -201,17 +185,14 @@ void runCommand(int fd, char** argVector, int nArgs) {
     if (nArgs != 2) {
         char* msg = "Run must (only) receive input file name.\n";
         safe_write(fd, msg, strlen(msg) + 1);
+        safe_close(fd);
         return;
     }
 
     if (currForks >= MAXCHILDREN) {
-        puts("More forks running than allowed, pausing...");
+        puts("More forks running than allowed, waiting...");
     }
-    while (currForks >= MAXCHILDREN) {
-        //TODO active waiting...
-        //alarm??
-        //pause();
-    }
+    while (currForks >= MAXCHILDREN) {}
 
     pid_t pid = fork(); 
     if (pid == -1) {
@@ -219,12 +200,6 @@ void runCommand(int fd, char** argVector, int nArgs) {
         cleanExit(EXIT_FAILURE);
     }
     if (pid == 0) {
-        // Wait for parent to give green light signal.
-        // Actively waiting because the process could enter
-        // the while loop, receive a signal before pause
-        // and get stuck because there would be no more signals.
-        while (!forkGreenlight); //TODO active waiting 
-
         if (fd != 1) {
             safe_dup2(fd, 1);
             safe_dup2(fd, 2);
@@ -235,18 +210,19 @@ void runCommand(int fd, char** argVector, int nArgs) {
         perror("Error on exec call.\n");
         cleanExit(EXIT_FAILURE);
     } else {
+        // Blocking signals because we have to make sure
+        // the new process is in the forks vector before 
+        // treating any SIGCHLD, also protects currForks
+        safe_sigprocmask(SIG_BLOCK, &sigchldmask, NULL);
         process* proc = process_alloc(pid); 
         if (proc == NULL) {
             fprintf(stderr, "Error allocating object");
-            exit(1);
+            cleanExit(EXIT_FAILURE);
         }
         vector_pushBack(forks, proc);
-        process_start(proc);
-        if ((kill(pid, SIGUSR1)) < 0) {
-            perror("Error sending signal to child process.\n");
-            exit(EXIT_FAILURE);
-        }
         currForks++;
+        process_start(proc);
+        safe_sigprocmask(SIG_UNBLOCK, &sigchldmask, NULL);
     }
 }
 
@@ -256,10 +232,7 @@ void runCommand(int fd, char** argVector, int nArgs) {
  */
 void exitCommand() {
     puts("Exiting Advanced Shell");
-    while (currForks > 0) {
-        //TODO active waiting
-        //pause();
-    }
+    while (currForks > 0) {}
     printProcesses();
     //TODO
     //close(???);
@@ -288,11 +261,12 @@ void treatClient(clientmsg_t* buffer) {
      */
     if (nArgs == 0) {
         safe_write(fcli, "\0", 1);
-        return;
     } else {
         if (command("run", argVector)) {
             puts("Client run request received.");
             runCommand(fcli, argVector, nArgs);            
+            //runCommand closes the pipe
+            return;
         } else {
             invalidCommand(fcli);
         }
@@ -314,7 +288,9 @@ void treatInput(char* buffer) {
     }
 
     // Ignore empty prompts
-    if (nArgs == 0) return;
+    if (nArgs == 0) {
+        return;
+    }
     if (command("run", argVector)) {
         runCommand(1, argVector, nArgs);            
     } else if (command("exit", argVector)) {
@@ -328,13 +304,18 @@ void treatInput(char* buffer) {
 int main(int argc, char** argv) {
     puts("Welcome to Advanced Shell");
     parseArgs(argc, argv);
+
+    // Prepare mask to block SIGCHLD
+    // No need to check errors because EINVAL won't ever happen
+    sigemptyset(&sigchldmask);
+    sigaddset(&sigchldmask, SIGCHLD);
     
-    // Set signal handlers
-    struct sigaction usr1act;
-    safe_setsigaction(&usr1act, SIGUSR1, &sigusr1handler);
-    
+    // Set SIGCHLD action
     struct sigaction chldact;
-    safe_setsigaction(&chldact, SIGCHLD, &sigchldhandler);
+    memset(&chldact, 0, sizeof(struct sigaction));
+    chldact.sa_handler = &sigchldhandler;
+    chldact.sa_flags = SA_NOCLDSTOP;
+    safe_sigaction(SIGCHLD, &chldact, NULL);
 
     // Child processes variables
     forks = vector_alloc(FORKVECINITSIZE);
@@ -345,14 +326,14 @@ int main(int argc, char** argv) {
 
     // Create and open server pipe
     int fserv;
-    snprintf(serverPipe, MAXPIPELEN, "/tmp/%s.pipe", argv[0]);
+    snprintf(serverPipe, MAXPIPELEN, "%s.pipe", argv[0]);
     fserv = createServerPipe(serverPipe);
 
     fd_set smask;
     FD_ZERO(&smask);
     FD_SET(0, &smask);
     FD_SET(fserv, &smask);
-    
+
     while (1) {
         fd_set tmask = smask; 
         int fready = select(fserv+1, &tmask, NULL, NULL, NULL);
@@ -382,6 +363,4 @@ int main(int argc, char** argv) {
             treatClient(&cliBuffer);
         }
     }
-    exit(EXIT_SUCCESS);
 }
-

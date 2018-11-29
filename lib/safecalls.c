@@ -10,11 +10,11 @@
 #include "safecalls.h"
 
 
-//Default wanted behaviour for initializing a sigaction
-void safe_setsigaction(struct sigaction* act, int signal, void* handler) {
-    memset(act, 0, sizeof(struct sigaction));
-    act->sa_handler = handler;
-    safe_sigaction(signal, act, NULL);
+void safe_sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
+    if ((sigprocmask(how, set, oldset) < 0)) {
+        perror("Setting signal mask failed.\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 

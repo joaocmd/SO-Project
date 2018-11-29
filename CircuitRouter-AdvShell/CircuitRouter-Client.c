@@ -52,40 +52,29 @@ void parseArgs(int argc, char** argv) {
  * endhandler
  */
 void endhandler(int s) {
-    int status;
-    switch (s) {
-        case SIGPIPE:
-        {
-            char* msg = "Broken pipe, server probably not running.\n";
-            write(2, msg, strlen(msg));
-            status = EXIT_FAILURE;
-            break;
-        }
-        case SIGINT:
-        {
-            status = EXIT_SUCCESS;
-            break;
-        }
-    }
-    if (close(fserv) < 0) {
-        char* msg = "Error closing server pipe.";
+    int status = EXIT_SUCCESS;
+    if (s == SIGPIPE) {
+        char* msg = "Broken pipe, server probably not running.\n";
         write(2, msg, strlen(msg));
         status = EXIT_FAILURE;
     }
-    if (close(fcli) < 0) {
-        // The fd might not be open, just ignore then
-        if (errno != EBADF) {
-            char* msg = "Error closing client pipe.";
-            write(2, msg, strlen(msg));
-            status = EXIT_FAILURE;
-        }
-    }
+
     if (unlink(buffer.pipe) < 0) {
         char* msg = "Error unlinking client pipe.";
         write(2, msg, strlen(msg));
         status = EXIT_FAILURE;
     }
-    exit(status);
+    _exit(status);
+}
+
+
+/*
+ * setsigaction: sets the default behaviour for a sigaction
+ */
+void setsigaction(int signum, struct sigaction* action, void* handler) {
+    memset(action, 0, sizeof(struct sigaction));
+    action->sa_handler = handler;
+    safe_sigaction(signum, action, NULL);
 }
 
 
@@ -96,17 +85,20 @@ int main(int argc, char** argv) {
 
     // Set signal handlers
     struct sigaction pipeact;
-    safe_setsigaction(&pipeact, SIGPIPE, &endhandler);
+    setsigaction(SIGPIPE, &pipeact, &endhandler);
+
+    struct sigaction termact;
+    setsigaction(SIGTERM, &termact, &endhandler);
 
     struct sigaction intact;
-    safe_setsigaction(&intact, SIGINT, &endhandler);
+    setsigaction(SIGINT, &intact, &endhandler);
 
     // Open server pipe
     char* serverPipe = argv[1];
     fserv = safe_open(serverPipe, O_WRONLY);
 
     // Create and open client pipe
-    snprintf(buffer.pipe, MAXPIPELEN, "/tmp/advclient%i.pipe", getpid());
+    snprintf(buffer.pipe, MAXPIPELEN, ".advclient%i.pipe", getpid());
     safe_unlink(buffer.pipe);
     safe_mkfifo(buffer.pipe, 0666);
 
@@ -122,7 +114,7 @@ int main(int argc, char** argv) {
         write(fserv, &buffer, sizeof(buffer));
         
         // Wait for response and output it
-        //waitClose(fd);
+        // TODO wait for adv shell to close before trying to open
         fcli = safe_open(buffer.pipe, O_RDONLY);
         int bread = read(fcli, buffer.msg, MAXMSGSIZE);
         safe_close(fcli);
@@ -130,7 +122,3 @@ int main(int argc, char** argv) {
         printf("%s", buffer.msg);
     }
 }
-
-/*void waitClosed(int fd) {
-    while ((int bread = read(fcli, "" , 0)) == 0) {}
-}*/

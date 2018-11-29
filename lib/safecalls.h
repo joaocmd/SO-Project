@@ -15,8 +15,7 @@
  */
 
 
-// Default wanted behaviour for initializing a sigaction
-void safe_setsigaction(struct sigaction* act, int signal, void* handler);
+void safe_sigprocmask(int how, const sigset_t *set, sigset_t *oldset);
 
 
 void safe_sigaction(int signum, const struct sigaction* act, struct sigaction* oldact);
