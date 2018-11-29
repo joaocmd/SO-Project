@@ -2,3 +2,4 @@ client da open antes do seqsolver dar close - ficheiro random sempre?
 espera ativa está na boa? - No select talvez nao
 Fechar todos os file descriptors ou o SO trata disso?
 usar exit dentro dum signal handler - _exit
+mudar read para fgets
