@@ -1,7 +1,7 @@
 #ifndef ADVSHELLPROTOCOL_H
 #define ADVSHELLPROTOCOL_H
 
-#define MAXPIPELEN 128
+#define MAXPIPELEN 256
 #define MAXMSGSIZE 256
 
 // struct clientmsg

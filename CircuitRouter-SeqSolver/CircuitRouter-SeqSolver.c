@@ -238,7 +238,7 @@ int main(int argc, char** argv){
     fprintf(outputFP, "Verification passed.\n");
 
     if ((fclose(outputFP)) < 0) {
-        fprintf(stderr, "Error closing output file, resuming program\n");
+        perror("Error closing output file, resuming program");
     }
     puts("Circuit Solved.");
 

@@ -12,7 +12,7 @@
 
 void safe_sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
     if ((sigprocmask(how, set, oldset) < 0)) {
-        perror("Setting signal mask failed.\n");
+        perror("Setting signal mask failed");
         exit(EXIT_FAILURE);
     }
 }
@@ -20,7 +20,7 @@ void safe_sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
 
 void safe_sigaction(int signum, const struct sigaction* act, struct sigaction* oldact) {
     if ((sigaction(signum, act, oldact)) < 0) {
-        perror("Exit setting sigaction\n");
+        perror("Exit setting sigaction");
         exit(EXIT_FAILURE);
     }
 }
@@ -28,7 +28,7 @@ void safe_sigaction(int signum, const struct sigaction* act, struct sigaction* o
 
 void safe_mkfifo(const char *pathname, mode_t mode){
     if ((mkfifo(pathname, mode)) < 0) {
-        perror("Error creating named pipe.\n");
+        perror("Error creating named pipe");
         exit(EXIT_FAILURE);
     }
 }
@@ -37,7 +37,7 @@ void safe_mkfifo(const char *pathname, mode_t mode){
 void safe_unlink(const char *pathname) {
     if ((unlink(pathname)) < 0){
         if (errno != ENOENT) {
-            perror("Error unlinking file.\n");
+            perror("Error unlinking file");
             exit(EXIT_FAILURE);
         }
     }
@@ -49,7 +49,7 @@ void safe_dup2(int oldfd, int newfd) {
         if (errno == EINTR) {
             safe_dup2(oldfd, newfd);
         }
-        perror("Error duplicating file descriptor.\n");
+        perror("Error duplicating file descriptor");
         exit(EXIT_FAILURE);
     }
 }
@@ -61,7 +61,7 @@ int safe_read(int fildes, void *buf, size_t nbyte){
 		if (errno == EINTR) {
 			return safe_read(fildes, buf, nbyte);
 		} else{
-			perror("Error on read call.\n");
+			perror("Error on read call");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -74,7 +74,7 @@ void safe_write(int fildes, const void *buf, size_t nbyte){
         if (errno == EINTR) {
             safe_write(fildes, buf, nbyte);
         }
-        perror("Error on write call.\n");
+        perror("Error on write call");
         exit(EXIT_FAILURE);
     }
 }
@@ -86,7 +86,7 @@ int safe_open(const char *path, int oflag) {
 		if (errno == EINTR) {
 			return safe_open(path, oflag);
 		} else {
-			perror("Error opening file.\n");
+			perror("Error opening file");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -99,7 +99,7 @@ void safe_close(int fildes){
         if (errno == EINTR) {
             safe_close(fildes);
         }
-        perror("Error closing file.\n");
+        perror("Error closing file");
         exit(EXIT_FAILURE);
     }
 }

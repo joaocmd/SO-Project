@@ -17,6 +17,8 @@
 #include "lib/safecalls.h"
 #include "shlib/shellprotocol.h"
 
+#define DIRLENGTH 128
+
 
 clientmsg_t buffer;
 int fserv;
@@ -44,6 +46,7 @@ void parseArgs(int argc, char** argv) {
     }
     if (access(argv[1], F_OK) == -1) {
         fprintf(stderr, "Invalid pipe path.\n");
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -57,6 +60,21 @@ void endhandler(int s) {
         char* msg = "Broken pipe, server probably not running.\n";
         write(2, msg, strlen(msg));
         status = EXIT_FAILURE;
+    }
+
+    if (close(fserv) < 0) {
+        char* msg = "Error closing server pipe.";
+        write(2, msg, strlen(msg));
+        status = EXIT_FAILURE;
+    }
+ 
+    if (close(fcli) < 0) {
+        // The fd might not be open, just ignore then
+        if (errno != EBADF) {
+            char* msg = "Error closing client pipe.";
+            write(2, msg, strlen(msg));
+            status = EXIT_FAILURE;
+        }
     }
 
     if (unlink(buffer.pipe) < 0) {
@@ -75,6 +93,29 @@ void setsigaction(int signum, struct sigaction* action, void* handler) {
     memset(action, 0, sizeof(struct sigaction));
     action->sa_handler = handler;
     safe_sigaction(signum, action, NULL);
+}
+
+
+/*
+ * waitPipeClosed:Waits for the writer to close the pipe to make sure
+ * when we reopen we get blocked until the Advanced Shell opens it again
+ */
+void waitPipeClosed(int fd) {
+    char buff;
+    while (read(fd, &buff, 1) > 0) {}
+}
+
+/*
+ * createClientPipe: Creates the pipe for the Advanced Shell to use
+ */
+void createClientPipe() {
+    char dir[DIRLENGTH];
+    if ((getcwd(dir, DIRLENGTH)) == NULL) {
+        perror("Error getting current working directory");
+    }
+    snprintf(buffer.pipe, MAXPIPELEN, "%s/.client%i.pipe", dir, getpid());
+    safe_unlink(buffer.pipe);
+    safe_mkfifo(buffer.pipe, 0666);
 }
 
 
@@ -97,28 +138,26 @@ int main(int argc, char** argv) {
     char* serverPipe = argv[1];
     fserv = safe_open(serverPipe, O_WRONLY);
 
-    // Create and open client pipe
-    snprintf(buffer.pipe, MAXPIPELEN, ".advclient%i.pipe", getpid());
-    safe_unlink(buffer.pipe);
-    safe_mkfifo(buffer.pipe, 0666);
+    // Create client pipe
+    createClientPipe();
 
     while (1) {
         printf("> ");
         char* line = fgets(buffer.msg, MAXMSGSIZE, stdin);
         if (line == NULL) {
-            fprintf(stderr, "Error reading input, terminating.\n");
+            fprintf(stderr, "Error reading input or reached EOF, terminating.");
             exit(EXIT_FAILURE);
         }
    
         // Send any command to the advanced shell
-        write(fserv, &buffer, sizeof(buffer));
+        safe_write(fserv, &buffer, sizeof(buffer));
         
         // Wait for response and output it
-        // TODO wait for adv shell to close before trying to open
         fcli = safe_open(buffer.pipe, O_RDONLY);
-        int bread = read(fcli, buffer.msg, MAXMSGSIZE);
-        safe_close(fcli);
+        int bread = safe_read(fcli, buffer.msg, MAXMSGSIZE);
         buffer.msg[bread] = '\0';
+        waitPipeClosed(fcli);
+        safe_close(fcli);
         printf("%s", buffer.msg);
     }
 }

@@ -97,5 +97,5 @@ void process_end(process* p) {
 void process_print(process* p) {
     char* status = (p->status == OK)? "OK" : "NOK";
     float time = TIMER_DIFF_SECONDS(p->start, p->end);
-    printf("CHILD EXITED (PID=%i; return %s; %.3f s)\n", p->pid, status, time);
+    printf("CHILD EXITED (PID=%i; return %s; %.0f s)\n", p->pid, status, time);
 }
