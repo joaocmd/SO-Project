@@ -345,8 +345,7 @@ int main(int argc, char** argv) {
 
         // Got input from stdin
         if (FD_ISSET(0, &tmask)) {
-            char* line = fgets(buffer, BUFFERSIZE, stdin);
-            if (line == NULL) {
+            if (fgets(buffer, BUFFERSIZE, stdin) == NULL) {
                 fprintf(stderr, "Error reading input or reached EOF, terminating.\n");
             }
             treatInput(buffer);

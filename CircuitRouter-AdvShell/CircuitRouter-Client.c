@@ -17,7 +17,7 @@
 #include "lib/safecalls.h"
 #include "shlib/shellprotocol.h"
 
-#define DIRLENGTH 128
+#define DIRLENGTH 100
 
 
 clientmsg_t buffer;
@@ -143,8 +143,7 @@ int main(int argc, char** argv) {
 
     while (1) {
         printf("> ");
-        char* line = fgets(buffer.msg, MAXMSGSIZE, stdin);
-        if (line == NULL) {
+        if (fgets(buffer.msg, MAXMSGSIZE, stdin) == NULL) {
             fprintf(stderr, "Error reading input or reached EOF, terminating.");
             exit(EXIT_FAILURE);
         }
